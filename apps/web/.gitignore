@@ -1,0 +1,58 @@
+# --- Node / Package managers ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+.pnp.*
+.pnpm-debug.log*
+
+# --- Next.js ---
+.next/
+.next/cache/
+out/
+build/
+
+# --- Vercel / Hosting ---
+.vercel/
+
+# --- TypeScript / Tooling ---
+*.tsbuildinfo
+.eslintcache
+
+# --- Tests / Coverage ---
+coverage/
+.nyc_output/
+
+# --- Env / Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Supabase CLI (mantener config/migrations, ignorar temporales) ---
+supabase/.temp/
+supabase/.branches/
+supabase/.logs/
+supabase/.cache/
+supabase/.db/
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# --- Misc ---
+*.log
+*.pid
+*.seed
+*.pem
+*.key
+*.crt
+*.swp
+*.swo

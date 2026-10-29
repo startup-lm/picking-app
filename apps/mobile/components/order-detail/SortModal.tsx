@@ -1,0 +1,80 @@
+import React, { useState, useEffect } from 'react';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ThemedText } from '@/components/themed-text';
+
+const CONTROL_HEIGHT = 44;
+
+type Props = {
+  visible: boolean;
+  sortKey: 'location' | 'sku';
+  sortDir: 'asc' | 'desc';
+  onClose: () => void;
+  onApply: (key: 'location' | 'sku', dir: 'asc' | 'desc') => void;
+};
+
+export default function SortModal({ visible, sortKey, sortDir, onClose, onApply }: Props) {
+  const [tmpKey, setTmpKey] = useState<typeof sortKey>(sortKey);
+  const [tmpDir, setTmpDir] = useState<typeof sortDir>(sortDir);
+
+  useEffect(() => { if (visible) { setTmpKey(sortKey); setTmpDir(sortDir); } }, [visible, sortKey, sortDir]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalCard}>
+          <ThemedText type="defaultSemiBold" style={{ fontSize: 24, textAlign: 'center', marginBottom: 12 }}>
+            Ordenar lista
+          </ThemedText>
+
+          <ThemedText type="defaultSemiBold" style={{ marginTop: 4 }}>Campo</ThemedText>
+          <View style={styles.choiceRow}>
+            <Pressable onPress={() => setTmpKey('location')} style={[styles.choiceBtn, tmpKey === 'location' && styles.choiceActive]}>
+              <ThemedText>Ubicación</ThemedText>
+            </Pressable>
+            <Pressable onPress={() => setTmpKey('sku')} style={[styles.choiceBtn, tmpKey === 'sku' && styles.choiceActive]}>
+              <ThemedText>Artículo</ThemedText>
+            </Pressable>
+          </View>
+
+          <ThemedText type="defaultSemiBold" style={{ marginTop: 10 }}>Dirección</ThemedText>
+          <View style={styles.choiceRow}>
+            <Pressable onPress={() => setTmpDir('asc')} style={[styles.choiceBtn, tmpDir === 'asc' && styles.choiceActive]}>
+              <ThemedText>A → Z</ThemedText>
+            </Pressable>
+            <Pressable onPress={() => setTmpDir('desc')} style={[styles.choiceBtn, tmpDir === 'desc' && styles.choiceActive]}>
+              <ThemedText>Z → A</ThemedText>
+            </Pressable>
+          </View>
+
+          <View style={styles.modalActions}>
+            <Pressable onPress={onClose} style={[styles.actionBtn, styles.cancelBtn]}>
+              <ThemedText>Cancelar</ThemedText>
+            </Pressable>
+            <Pressable onPress={() => onApply(tmpKey, tmpDir)} style={[styles.actionBtn, styles.okBtn]}>
+              <ThemedText type="defaultSemiBold">Aplicar</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  modalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
+  modalCard: {
+    width: '100%', maxWidth: 420, backgroundColor: '#FFF', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E5E7EB',
+  },
+  choiceRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  choiceBtn: {
+    flex: 1, height: CONTROL_HEIGHT, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF',
+  },
+  choiceActive: { backgroundColor: '#FDE68A', borderColor: '#1F2937' },
+  modalActions: { marginTop: 34, flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  actionBtn: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: '#D1D5DB' },
+  cancelBtn: { backgroundColor: '#F3F4F6' },
+  okBtn: { backgroundColor: '#FDE68A' },
+});
