@@ -1,6 +1,6 @@
 {
   "name": "picking-app-workspace",
-  "version": "1.0.0",
+  "version": "1.0.9",
   "private": true,
   "description": "Smart Warehouse Picking & Inventory Suite (Web + Mobile)",
   "workspaces": [
@@ -9,7 +9,14 @@
   "scripts": {
     "dev:web": "npm run dev --prefix apps/web",
     "dev:mobile": "npm run start --prefix apps/mobile",
-    "build:web": "npm run build --prefix apps/web"
+    "build:web": "npm run build --prefix apps/web",
+    "lint:web": "npm run lint --prefix apps/web",
+    "lint:mobile": "npm run lint --prefix apps/mobile",
+    "lint": "npm run lint:web && npm run lint:mobile",
+    "release": "node scripts/release.mjs",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major"
   },
   "keywords": [
     "wms",
