@@ -138,3 +138,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 3. **Manejo de Errores Defensivo**: En la app móvil, el operario trabaja en movimiento con guantes y mala conexión. Todo error de escaneo debe emitir toast claro y vibración de error (`Haptics.NotificationFeedbackType.Error`).
 4. **Respetar White-Labeling**: La identidad visual, logos y nombres están centralizados en `apps/mobile/app.json`, `apps/mobile/constants/theme.ts` y `apps/web/tailwind.config.js`. No cablear strings de marcas propietarias fijas en componentes reutilizables.
 5. **No introducir dependencias sin justificación**: Mantener el bundle liviano y compatible con las versiones fijadas en los `package.json`.
+6. **Validación obligatoria de cambios**: al modificar `apps/web`, correr `npm run build:web` o `npm run lint:web`; al modificar `apps/mobile`, correr `./node_modules/.bin/tsc --noEmit` dentro de `apps/mobile` o `npm run lint:mobile`. Informar el resultado real.
+7. **Comandos aislados por app**: usar siempre `--prefix apps/web` o `--prefix apps/mobile` (React 18 vs React 19), nunca instalar dependencias de una app desde la raíz.
+8. **Consultar el esquema**: antes de tareas mayores que toquen datos, revisar `supabase/schema.sql`.
+9. **Mobile en depósito**: priorizar alto contraste y bajo consumo de batería en `constants/theme.ts` y en las pantallas de picking.
