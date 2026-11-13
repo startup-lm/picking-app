@@ -5,7 +5,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(61);
+SELECT plan(79);
 
 -- Usuarios de prueba
 INSERT INTO auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) VALUES
@@ -37,6 +37,8 @@ BEGIN
   PERFORM set_config('test.t1_id', (SELECT id::text FROM orders WHERE order_number = 'T-1'), true);
   PERFORM set_config('test.l1_id', (SELECT ol.id::text FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE p.sku = 'TEST-P1'), true);
   PERFORM set_config('test.l2_id', (SELECT ol.id::text FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE p.sku = 'TEST-P2'), true);
+  PERFORM set_config('test.draft_id', (SELECT id::text FROM orders WHERE order_number = 'PF-000001'), true);
+  PERFORM set_config('test.report_today', ((now() AT TIME ZONE (SELECT timezone FROM app_settings WHERE id = 1))::date)::text, true);
   PERFORM set_config('test.e1', gen_random_uuid()::text, true);
   PERFORM set_config('test.e2', gen_random_uuid()::text, true);
   PERFORM set_config('test.e3', gen_random_uuid()::text, true);
@@ -51,6 +53,11 @@ SELECT is(
   (api_find_line_by_code(current_setting('test.t1_id')::bigint, '17799999990001')->>'kind'),
   'package',
   'api_find_line_by_code returns package kind'
+);
+SELECT is(
+  (api_find_line_by_code(current_setting('test.t1_id')::bigint, '17799999990001')->'line'->>'id')::bigint,
+  current_setting('test.l1_id')::bigint,
+  'api_find_line_by_code returns line id L1'
 );
 SELECT is(
   (api_find_line_by_code(current_setting('test.t1_id')::bigint, '0779999990001')->>'kind'),
@@ -77,7 +84,7 @@ SELECT throws_ok(
 
 -- 2. Ceros a la izquierda
 SELECT is(
-  (api_find_line_by_code((SELECT id FROM orders WHERE order_number = 'PF-000001'), '0001234567890')->'product'->>'sku'),
+  (api_find_line_by_code((SELECT id FROM orders WHERE order_number = 'PF-000006'), '0001234567890')->'product'->>'sku'),
   'PF-001',
   'Barcode with leading zeros found with exact string'
 );
@@ -98,6 +105,14 @@ SELECT is(
   'in_progress',
   'Order transitioned to in_progress'
 );
+RESET role;
+SELECT is(
+  (SELECT started_by FROM orders WHERE id = current_setting('test.t1_id')::bigint),
+  '00000000-0000-0000-0000-0000000000a2'::uuid,
+  'Order started_by set to operator'
+);
+SET LOCAL role authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 
 -- 4. Reintento con e1 -> duplicate
 SELECT is(
@@ -110,11 +125,14 @@ SELECT is(
   1,
   'package_scanned remains 1 on duplicate'
 );
+RESET role;
 SELECT is(
   (SELECT count(*)::int FROM scan_events WHERE client_event_id = current_setting('test.e1')::uuid),
   1,
   'scan_events has exactly 1 entry for e1'
 );
+SET LOCAL role authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 
 -- 5. Dos escaneos más (e2, e3) suman 3; cuarto escaneo (e4) -> out_of_range
 SELECT api_scan(current_setting('test.l1_id')::bigint, 'picking', 'package', 1, current_setting('test.e2')::uuid);
@@ -131,11 +149,14 @@ SELECT throws_ok(
   'out_of_range',
   'Scanning beyond total raises out_of_range'
 );
+RESET role;
 SELECT is(
   (SELECT count(*)::int FROM scan_events WHERE client_event_id = current_setting('test.e4')::uuid),
   0,
   'No scan_event recorded for aborted scan'
 );
+SET LOCAL role authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 
 -- 6. delta = -1 baja a 2; delta = 0 o stage inválido -> invalid_argument
 SELECT api_scan(current_setting('test.l1_id')::bigint, 'picking', 'package', -1, gen_random_uuid());
@@ -181,6 +202,15 @@ SELECT is(
   'assembled',
   'api_complete_picking transitions order to assembled'
 );
+RESET role;
+SELECT is(
+  (SELECT assembled_by FROM orders WHERE id = current_setting('test.t1_id')::bigint),
+  '00000000-0000-0000-0000-0000000000a2'::uuid,
+  'Order assembled_by set to operator'
+);
+SET LOCAL role authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
+
 SELECT throws_ok(
   format('SELECT api_complete_picking(%s)', current_setting('test.t1_id')),
   'P0001',
@@ -293,6 +323,14 @@ SELECT is(
   'cancelled',
   'Cancelling with reason succeeds'
 );
+RESET role;
+SELECT is(
+  (SELECT cancel_reason FROM orders WHERE id = current_setting('test.status_id')::bigint),
+  'Cliente canceló por error',
+  'Cancel reason persisted in database'
+);
+SET LOCAL role authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
 
 -- draft -> pending y pending -> draft
 RESET role;
@@ -333,13 +371,13 @@ SET LOCAL role authenticated;
 SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 
 SELECT throws_ok(
-  format('SELECT api_find_line_by_code(%s, ''17799999990001'')', (SELECT id FROM orders WHERE order_number = 'PF-000001')),
+  format('SELECT api_find_line_by_code(%s, ''17799999990001'')', current_setting('test.draft_id')),
   'P0002',
   'not_found',
   'Operator cannot find line in draft order'
 );
 SELECT throws_ok(
-  format('SELECT api_complete_picking(%s)', (SELECT id FROM orders WHERE order_number = 'PF-000001')),
+  format('SELECT api_complete_picking(%s)', current_setting('test.draft_id')),
   'P0002',
   'not_found',
   'Operator cannot complete picking on draft order'
@@ -400,30 +438,66 @@ SELECT throws_ok(
   'Editing in_progress order raises order_locked'
 );
 
--- Línea copia location del producto
+-- Pedido con 2 líneas: tomar order_id del resultado, verificar location copiada y totales como suma de líneas
+SELECT set_config('test.two_lines_order_id',
+  (api_save_order(jsonb_build_object(
+    'customer_name', 'Cliente 2 Líneas',
+    'lines', jsonb_build_array(
+      jsonb_build_object('product_id', 1, 'package_total', 3, 'unit_total', 2),
+      jsonb_build_object('product_id', 2, 'package_total', 1, 'unit_total', 4)
+    )
+  ))->>'order_id'),
+  true
+);
+
 SELECT is(
-  (SELECT location FROM order_lines WHERE order_id = (SELECT max(id) FROM orders) LIMIT 1),
+  (SELECT location FROM order_lines WHERE order_id = current_setting('test.two_lines_order_id')::bigint AND product_id = 1),
   (SELECT location FROM products WHERE id = 1),
   'Saved order line copies products.location'
 );
 
--- Totales del pedido = suma de líneas
 SELECT is(
-  (SELECT total_package FROM orders WHERE id = (SELECT max(id) FROM orders)),
-  1,
-  'Order total_package updated automatically by trigger'
+  (SELECT total_package FROM orders WHERE id = current_setting('test.two_lines_order_id')::bigint),
+  4,
+  'Order total_package is sum of lines package_total'
+);
+
+SELECT is(
+  (SELECT total_unit FROM orders WHERE id = current_setting('test.two_lines_order_id')::bigint),
+  6,
+  'Order total_unit is sum of lines unit_total'
 );
 
 -- 15. api_import_products
 -- Dry run con 1 nuevo, 1 actualización (celda de location vacía que no pisa) y 1 error (barcode_in_use)
-SELECT is(
+SELECT set_config('test.import_prod_res',
   (api_import_products(jsonb_build_array(
     jsonb_build_object('row', 1, 'sku', 'IMPORT-NEW-1', 'description', 'Nuevo', 'unit_barcode', '7799999000011'),
     jsonb_build_object('row', 2, 'sku', 'PF-001', 'description', 'Cinta editada', 'location', ''),
     jsonb_build_object('row', 3, 'sku', 'IMPORT-ERR-1', 'description', 'Error', 'unit_barcode', '0123456789012')
-  ), true)->>'created'),
+  ), true))::text,
+  true
+);
+
+SELECT is(
+  (current_setting('test.import_prod_res')::jsonb->>'created'),
   '1',
   'Dry run import products reports 1 created'
+);
+SELECT is(
+  (current_setting('test.import_prod_res')::jsonb->>'updated'),
+  '1',
+  'Dry run import products reports 1 updated'
+);
+SELECT is(
+  (current_setting('test.import_prod_res')::jsonb->'errors'->0->>'code'),
+  'barcode_in_use',
+  'Dry run reports barcode_in_use error'
+);
+SELECT is(
+  (current_setting('test.import_prod_res')::jsonb->'errors'->0->>'row')::int,
+  3,
+  'Dry run reports error on row 3'
 );
 SELECT is(
   (SELECT count(*)::int FROM products WHERE sku = 'IMPORT-NEW-1'),
@@ -431,14 +505,25 @@ SELECT is(
   'Dry run does not mutate products table'
 );
 
--- Sin dry run -> aplicada
-SELECT is(
+-- Sin dry run: incluir fila con error (IMPORT-ERR-1)
+SELECT set_config('test.live_prod_res',
   (api_import_products(jsonb_build_array(
     jsonb_build_object('row', 1, 'sku', 'IMPORT-NEW-1', 'description', 'Nuevo', 'unit_barcode', '7799999000011'),
-    jsonb_build_object('row', 2, 'sku', 'PF-001', 'description', 'Cinta editada', 'location', '')
-  ), false)->>'created'),
+    jsonb_build_object('row', 2, 'sku', 'PF-001', 'description', 'Cinta editada', 'location', ''),
+    jsonb_build_object('row', 3, 'sku', 'IMPORT-ERR-1', 'description', 'Error', 'unit_barcode', '0123456789012')
+  ), false))::text,
+  true
+);
+
+SELECT is(
+  (current_setting('test.live_prod_res')::jsonb->>'created'),
   '1',
-  'Live import products creates 1 product'
+  'Live import products creates 1 valid product'
+);
+SELECT is(
+  (SELECT count(*)::int FROM products WHERE sku = 'IMPORT-ERR-1'),
+  0,
+  'Invalid product IMPORT-ERR-1 not created in live import'
 );
 SELECT is(
   (SELECT location FROM products WHERE sku = 'PF-001'),
@@ -479,10 +564,30 @@ BEGIN
 END $$;
 
 -- Dry run -> orders_created = 2, 1 error unknown_sku de A-2, 1 aviso, y no se creó nada
+SELECT set_config('test.import_dry_res',
+  (api_import_orders(current_setting('test.import_rows')::jsonb, false, true))::text,
+  true
+);
+
 SELECT is(
-  (api_import_orders(current_setting('test.import_rows')::jsonb, false, true)->>'orders_created'),
+  (current_setting('test.import_dry_res')::jsonb->>'orders_created'),
   '2',
   'Dry run import orders reports 2 orders created'
+);
+SELECT is(
+  (current_setting('test.import_dry_res')::jsonb->'errors'->0->>'code'),
+  'unknown_sku',
+  'Dry run reports unknown_sku error'
+);
+SELECT is(
+  (current_setting('test.import_dry_res')::jsonb->'errors'->0->>'order_number'),
+  'ORD-A-2',
+  'Dry run reports unknown_sku on ORD-A-2'
+);
+SELECT is(
+  jsonb_array_length(current_setting('test.import_dry_res')::jsonb->'warnings'),
+  1,
+  'Dry run emits 1 warning for duplicate_sku_merged'
 );
 SELECT is(
   (SELECT count(*)::int FROM orders WHERE order_number IN ('ORD-A-1', 'ORD-A-3')),
@@ -492,6 +597,7 @@ SELECT is(
 
 -- Sin dry run -> creados ORD-A-1 y ORD-A-3, ORD-A-2 no existe
 SELECT api_import_orders(current_setting('test.import_rows')::jsonb, false, false);
+
 SELECT is(
   (SELECT count(*)::int FROM orders WHERE order_number IN ('ORD-A-1', 'ORD-A-3')),
   2,
@@ -501,6 +607,43 @@ SELECT is(
   (SELECT count(*)::int FROM orders WHERE order_number = 'ORD-A-2'),
   0,
   'Invalid order ORD-A-2 not created'
+);
+SELECT is(
+  (SELECT status FROM orders WHERE order_number = 'ORD-A-1'),
+  'draft',
+  'ORD-A-1 created with status = draft'
+);
+SELECT is(
+  (SELECT status FROM orders WHERE order_number = 'ORD-A-3'),
+  'draft',
+  'ORD-A-3 created with status = draft'
+);
+-- Cantidades de ORD-A-1 para SKU PF-002: 29 con 12 por bulto -> 2 bultos + 5 unidades
+SELECT is(
+  (SELECT package_total FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE ol.order_id = (SELECT id FROM orders WHERE order_number = 'ORD-A-1') AND p.sku = 'PF-002'),
+  2,
+  'ORD-A-1 PF-002 package_total is 2 (29 / 12)'
+);
+SELECT is(
+  (SELECT unit_total FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE ol.order_id = (SELECT id FROM orders WHERE order_number = 'ORD-A-1') AND p.sku = 'PF-002'),
+  5,
+  'ORD-A-1 PF-002 unit_total is 5 (29 % 12)'
+);
+-- SKU repetido sumado en ORD-A-3 (PF-004: 1 bulto + 2 unidades y 2 bultos + 3 unidades -> 3 bultos + 5 unidades)
+SELECT is(
+  (SELECT count(*)::int FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE ol.order_id = (SELECT id FROM orders WHERE order_number = 'ORD-A-3') AND p.sku = 'PF-004'),
+  1,
+  'ORD-A-3 has exactly 1 merged line for PF-004'
+);
+SELECT is(
+  (SELECT package_total FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE ol.order_id = (SELECT id FROM orders WHERE order_number = 'ORD-A-3') AND p.sku = 'PF-004'),
+  3,
+  'ORD-A-3 PF-004 package_total is sum of packages (1 + 2 = 3)'
+);
+SELECT is(
+  (SELECT unit_total FROM order_lines ol JOIN products p ON p.id = ol.product_id WHERE ol.order_id = (SELECT id FROM orders WHERE order_number = 'ORD-A-3') AND p.sku = 'PF-004'),
+  5,
+  'ORD-A-3 PF-004 unit_total is sum of units (2 + 3 = 5)'
 );
 
 -- Reintento -> order_exists
@@ -524,9 +667,14 @@ SELECT is(
 -- 17. api_report_orders
 -- Pedido armado hoy aparece en el día de hoy
 SELECT is(
-  (api_report_orders(current_date, current_date)->0->>'day'),
-  current_date::text,
+  (api_report_orders(current_setting('test.report_today')::date, current_setting('test.report_today')::date)->0->>'day'),
+  current_setting('test.report_today'),
   'Order assembled today appears in today report'
+);
+SELECT is(
+  (SELECT count(*)::int FROM jsonb_array_elements(api_report_orders(current_setting('test.report_today')::date, current_setting('test.report_today')::date)->0->'orders') x WHERE x->>'order_number' = 'T-1'),
+  1,
+  'T-1 is present in today report orders'
 );
 
 -- Rango de fechas > 92 días -> invalid_argument

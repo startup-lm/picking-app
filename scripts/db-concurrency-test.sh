@@ -8,13 +8,20 @@ DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
 OPERATOR_UID="00000000-0000-0000-0000-0000000000c1"
 FIXED_EVENT_ID="00000000-0000-0000-0000-0000000000e2"
 
-# 1. Limpieza de datos de corridas anteriores y setup inicial como superusuario
-psql "$DB_URL" -v ON_ERROR_STOP=1 >/dev/null <<SQL
--- Limpieza
+cleanup() {
+  psql "$DB_URL" -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL || true
 DELETE FROM orders WHERE order_number IN ('CONC-1', 'CONC-2');
 DELETE FROM products WHERE sku IN ('CONC-1', 'CONC-2');
 DELETE FROM auth.users WHERE id = '$OPERATOR_UID';
+SQL
+}
 
+trap cleanup EXIT
+
+# 1. Limpieza de datos de corridas anteriores y setup inicial como superusuario
+cleanup
+
+psql "$DB_URL" -v ON_ERROR_STOP=1 >/dev/null <<SQL
 -- Crear usuario operador activo
 INSERT INTO auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 VALUES ('$OPERATOR_UID', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'conc@test.local', '{"provider":"email","providers":["email"]}', '{"name":"Concurrency Test"}', now(), now())
@@ -100,13 +107,6 @@ if [ "$CONC_2_SCANNED" != "1" ] || [ "$CONC_2_EVENTS" != "1" ]; then
   echo "Error en CONC-2: esperado scanned=1 events=1, obtenido scanned=$CONC_2_SCANNED events=$CONC_2_EVENTS" >&2
   SUCCESS=false
 fi
-
-# 5. Limpieza final de datos de prueba
-psql "$DB_URL" -v ON_ERROR_STOP=1 >/dev/null <<SQL
-DELETE FROM orders WHERE order_number IN ('CONC-1', 'CONC-2');
-DELETE FROM products WHERE sku IN ('CONC-1', 'CONC-2');
-DELETE FROM auth.users WHERE id = '$OPERATOR_UID';
-SQL
 
 if [ "$SUCCESS" = true ]; then
   echo "concurrency: OK"

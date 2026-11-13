@@ -49,6 +49,17 @@ SELECT is((SELECT count(*) FROM customers)::int > 0, true, 'Active operator sees
 SELECT is((SELECT count(*) FROM app_settings)::int > 0, true, 'Active operator sees app_settings');
 
 -- 5. Operador activo: mutaciones directas son bloqueadas o afectan 0 filas
+-- Preparar IDs de pedido pending y línea asociada como superusuario
+RESET role;
+DO $$
+BEGIN
+  PERFORM set_config('test.pending_order_id', (SELECT id::text FROM orders WHERE order_number = 'PF-000002'), true);
+  PERFORM set_config('test.pending_line_id', (SELECT id::text FROM order_lines WHERE order_id = (SELECT id FROM orders WHERE order_number = 'PF-000002') LIMIT 1), true);
+END $$;
+
+SET LOCAL role authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
+
 SELECT throws_ok(
   $$ INSERT INTO products (sku, description, unit_barcode) VALUES ('FORBIDDEN-SKU', 'Test', '7799999999999') $$,
   '42501',
@@ -57,20 +68,21 @@ SELECT throws_ok(
 );
 
 -- Actualizaciones directas afectan 0 filas bajo RLS
-UPDATE orders SET status = 'cancelled' WHERE id = 1;
-UPDATE order_lines SET package_scanned = package_scanned + 1 WHERE id = 1;
-DELETE FROM orders WHERE id = 1;
+UPDATE orders SET status = 'cancelled' WHERE id = current_setting('test.pending_order_id')::bigint;
+UPDATE order_lines SET package_scanned = package_scanned + 1 WHERE id = current_setting('test.pending_line_id')::bigint;
+DELETE FROM orders WHERE id = current_setting('test.pending_order_id')::bigint;
 
 RESET role;
 SELECT is((SELECT count(*) FROM products WHERE sku = 'FORBIDDEN-SKU')::int, 0, 'Superuser verifies products untouched by operator');
-SELECT is((SELECT status FROM orders WHERE id = 1), 'draft', 'Superuser verifies order status untouched by operator');
-SELECT is((SELECT count(*) FROM orders WHERE id = 1)::int, 1, 'Superuser verifies order not deleted by operator');
+SELECT is((SELECT status FROM orders WHERE id = current_setting('test.pending_order_id')::bigint), 'pending', 'Superuser verifies order status untouched by operator');
+SELECT is((SELECT package_scanned FROM order_lines WHERE id = current_setting('test.pending_line_id')::bigint), 0, 'Superuser verifies order line package_scanned untouched by operator');
+SELECT is((SELECT count(*) FROM orders WHERE id = current_setting('test.pending_order_id')::bigint)::int, 1, 'Superuser verifies order not deleted by operator');
 
 -- 6. Operador activo: api_set_order_status falla con forbidden
 SET LOCAL role authenticated;
 SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 SELECT throws_ok(
-  $$ SELECT api_set_order_status(2, 'cancelled', 'motivo prueba') $$,
+  format('SELECT api_set_order_status(%s, ''cancelled'', ''motivo prueba'')', current_setting('test.pending_order_id')),
   '42501',
   'forbidden',
   'Active operator calling api_set_order_status raises forbidden'
