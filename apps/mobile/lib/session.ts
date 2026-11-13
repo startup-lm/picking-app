@@ -7,32 +7,44 @@ export type UserProfile = {
   is_active: boolean;
 };
 
+export type FetchProfileResult =
+  | { status: 'ok'; profile: UserProfile }
+  | { status: 'missing' }
+  | { status: 'error'; error: unknown };
+
 let signOutReason: 'expired' | 'inactive' | null = null;
 
-export async function fetchOwnProfile(): Promise<UserProfile | null> {
+export async function fetchOwnProfile(): Promise<FetchProfileResult> {
   try {
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      return null;
+    if (userError) {
+      return { status: 'error', error: userError };
+    }
+    if (!user) {
+      return { status: 'missing' };
     }
 
     const { data, error: profileError } = await supabase
       .from('profiles')
       .select('id, name, role, is_active')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !data) {
-      return null;
+    if (profileError) {
+      return { status: 'error', error: profileError };
     }
 
-    return data as UserProfile;
-  } catch {
-    return null;
+    if (!data) {
+      return { status: 'missing' };
+    }
+
+    return { status: 'ok', profile: data as UserProfile };
+  } catch (error) {
+    return { status: 'error', error };
   }
 }
 

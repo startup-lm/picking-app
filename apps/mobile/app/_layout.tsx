@@ -8,7 +8,7 @@ import { Colors } from '@/constants/theme';
 import { APP_NAME } from '@/constants/brand';
 import { supabase } from '@/lib/supabase/client';
 import { initFeedback } from '@/lib/feedback';
-import { fetchOwnProfile, signOut, type UserProfile } from '@/lib/session';
+import { fetchOwnProfile, isAuthError, signOut, type UserProfile } from '@/lib/session';
 import { SessionContext } from '@/lib/session-context';
 
 export default function RootLayout() {
@@ -42,6 +42,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     let active = true;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     if (session === undefined) return;
 
@@ -50,24 +51,61 @@ export default function RootLayout() {
       return;
     }
 
-    fetchOwnProfile()
-      .then(async (p) => {
+    const loadProfile = async (attempt: number) => {
+      try {
+        const res = await fetchOwnProfile();
         if (!active) return;
-        if (!p || !p.is_active) {
+
+        if (res.status === 'ok') {
+          if (res.profile.is_active) {
+            setProfile(res.profile);
+          } else {
+            setProfile(null);
+            await signOut('inactive');
+          }
+        } else if (res.status === 'missing') {
           setProfile(null);
           await signOut('inactive');
-        } else {
-          setProfile(p);
+        } else if (res.status === 'error') {
+          if (isAuthError(res.error)) {
+            setProfile(null);
+            await signOut('expired');
+          } else {
+            setProfile(null);
+            if (attempt < 3) {
+              retryTimer = setTimeout(() => {
+                if (active) {
+                  void loadProfile(attempt + 1);
+                }
+              }, 5000);
+            }
+          }
         }
-      })
-      .catch(async () => {
+      } catch (err) {
         if (!active) return;
-        setProfile(null);
-        await signOut('inactive');
-      });
+        if (isAuthError(err)) {
+          setProfile(null);
+          await signOut('expired');
+        } else {
+          setProfile(null);
+          if (attempt < 3) {
+            retryTimer = setTimeout(() => {
+              if (active) {
+                void loadProfile(attempt + 1);
+              }
+            }, 5000);
+          }
+        }
+      }
+    };
+
+    void loadProfile(0);
 
     return () => {
       active = false;
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
     };
   }, [session]);
 
