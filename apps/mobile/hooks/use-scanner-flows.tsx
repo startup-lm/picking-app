@@ -1,51 +1,98 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
-import ScannerModal, { BarcodeResult } from '@/components/ui/scanner-modal';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import ScannerModal, {
+  type BarcodeResult,
+  type ScannerLastResult,
+} from '@/components/ui/scanner-modal';
 
-type Options = {
-  onCode: (data: string, type?: string) => Promise<void>;
+type UseScannerFlowOptions = {
+  onCode: (code: string) => Promise<{ ok: boolean; message: string }>;
   title?: string;
   allowedTypes?: readonly string[];
 };
 
-export function useScannerFlow({ onCode, title = 'Escanear código', allowedTypes }: Options) {
+export function useScannerFlow({
+  onCode,
+  title = 'Escanear código',
+  allowedTypes,
+}: UseScannerFlowOptions) {
   const [open, setOpen] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const lastTsRef = useRef(0);
-  const MIN_INTERVAL_MS = 200;
+  const [lastResult, setLastResult] = useState<ScannerLastResult | undefined>(undefined);
+
+  const lastCodeRef = useRef<string>('');
+  const lastAtRef = useRef<number>(0);
+  const busyRef = useRef<boolean>(false);
 
   const types = useMemo<readonly string[]>(
     () =>
       allowedTypes ??
       ([
-        'qr', 'ean13', 'ean8', 'upc_a', 'upc_e',
-        'code128', 'code39', 'code93', 'itf14', 'codabar',
+        'qr',
+        'ean13',
+        'ean8',
+        'upc_a',
+        'upc_e',
+        'code128',
+        'code39',
+        'code93',
+        'itf14',
+        'codabar',
       ] as const),
     [allowedTypes]
   );
 
   const openScanner = useCallback(() => {
-    if (!locked) setOpen(true);
-  }, [locked]);
+    setOpen(true);
+  }, []);
 
-  const closeScanner = useCallback(() => setOpen(false), []);
+  const closeScanner = useCallback(() => {
+    setOpen(false);
+  }, []);
 
-  const onScanned = useCallback(
-    async (res: BarcodeResult) => {
+  const submitCode = useCallback(
+    async (raw: string): Promise<{ ok: boolean; message: string } | undefined> => {
+      const code = (raw ?? '').trim();
+      if (!code) return;
+
+      // Si se está procesando un escaneo, los nuevos se descartan (no se encolan)
+      if (busyRef.current) return;
+
       const now = Date.now();
-      if (now - lastTsRef.current < MIN_INTERVAL_MS) return;
-      lastTsRef.current = now;
+      const elapsed = now - lastAtRef.current;
 
-      if (locked) return;
-      setLocked(true);
-      setOpen(false); // cerrar cámara primero
+      // El mismo código se ignora durante 1500 ms
+      if (code === lastCodeRef.current && elapsed < 1500) {
+        return;
+      }
+
+      // Un código distinto se acepta después de 300 ms
+      if (code !== lastCodeRef.current && elapsed < 300) {
+        return;
+      }
+
+      busyRef.current = true;
+      lastCodeRef.current = code;
+      lastAtRef.current = now;
 
       try {
-        await onCode(String(res?.data ?? ''), res?.type);
+        const res = await onCode(code);
+        setLastResult({
+          kind: res.ok ? 'success' : 'error',
+          text: res.message,
+          at: Date.now(),
+        });
+        return res;
       } finally {
-        setTimeout(() => setLocked(false), 200);
+        busyRef.current = false;
       }
     },
-    [locked, onCode]
+    [onCode]
+  );
+
+  const onScanned = useCallback(
+    (res: BarcodeResult) => {
+      void submitCode(res.data);
+    },
+    [submitCode]
   );
 
   const Scanner = useCallback(
@@ -56,11 +103,11 @@ export function useScannerFlow({ onCode, title = 'Escanear código', allowedType
         onScanned={onScanned}
         types={types}
         title={title}
-        scanOnce
+        lastResult={lastResult}
       />
     ),
-    [open, closeScanner, onScanned, types, title]
+    [open, closeScanner, onScanned, types, title, lastResult]
   );
 
-  return { openScanner, closeScanner, Scanner, scanningLocked: locked };
+  return { openScanner, closeScanner, Scanner, submitCode };
 }

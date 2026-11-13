@@ -22,6 +22,9 @@
       "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -48,8 +51,7 @@
           "cameraPermission": "Necesitamos la cámara para escanear códigos de barra",
           "recordAudioAndroid": false
         }
-      ],
-      "expo-sqlite"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

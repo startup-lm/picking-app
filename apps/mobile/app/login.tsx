@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, type Palette } from '@/constants/theme';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
+import { consumeSignOutReason } from '@/lib/session';
 
 export default function LoginScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -24,7 +25,17 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const reason = consumeSignOutReason();
+    if (reason === 'inactive') {
+      setWarning('Tu usuario está inactivo. Pedile al administrador que lo active.');
+    } else if (reason === 'expired') {
+      setWarning('La sesión venció. Volvé a ingresar.');
+    }
+  }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -35,6 +46,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       setError(null);
+      setWarning(null);
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -71,6 +83,14 @@ export default function LoginScreen() {
           <ThemedText type="subtitle" style={styles.title}>
             Iniciar sesión
           </ThemedText>
+
+          {warning ? (
+            <View style={styles.warningBox}>
+              <ThemedText style={styles.warningText}>
+                {warning}
+              </ThemedText>
+            </View>
+          ) : null}
 
           <View style={styles.field}>
             <ThemedText style={styles.label}>Email</ThemedText>
@@ -156,6 +176,19 @@ const makeStyles = (p: Palette) =>
       textAlign: 'center',
       marginBottom: 8,
       color: p.text,
+    },
+    warningBox: {
+      borderWidth: 1,
+      borderColor: p.danger,
+      borderRadius: 8,
+      padding: 12,
+      backgroundColor: p.surfaceAlt,
+    },
+    warningText: {
+      color: p.danger,
+      textAlign: 'center',
+      fontSize: 14,
+      fontWeight: '600',
     },
     field: {
       gap: 6,

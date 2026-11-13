@@ -1,3 +1,5 @@
+import { isAuthError, signOut } from './session';
+
 const ERROR_MESSAGES: Record<string, string> = {
   forbidden: 'No tenés permiso para esta acción',
   not_found: 'Pedido o línea inexistente',
@@ -12,6 +14,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export function errorMessage(e: unknown): string {
+  if (isAuthError(e)) {
+    return 'La sesión venció. Volvé a ingresar.';
+  }
+
   let msg = '';
   if (typeof e === 'string') {
     msg = e;
@@ -25,4 +31,11 @@ export function errorMessage(e: unknown): string {
   }
 
   return 'No se pudo completar la acción. Revisá la conexión e intentá de nuevo.';
+}
+
+export async function handleError(e: unknown): Promise<string> {
+  if (isAuthError(e)) {
+    await signOut('expired');
+  }
+  return errorMessage(e);
 }
