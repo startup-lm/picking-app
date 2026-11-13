@@ -1,16 +1,18 @@
-import type { Product, ProductOrder } from '@/types/db';
+import type { OrderDetailLine } from '@/lib/repository/orders';
+import type { Stage } from '@/types/rpc';
+import { isLineComplete, progressOf } from './progress';
 
 // Extrae todas las letras de pasillo desde una location que puede tener múltiples segmentos
 // Ej: "A 02 01 - D 01 01" -> ["A","D"]
-function extractAisleLetters(location?: string): string[] {
+function extractAisleLetters(location?: string | null): string[] {
   const loc = (location ?? '').trim();
   if (!loc) return ['#'];
 
   // Soporta guión normal y en-dash
-  const parts = loc.split(/[-–]/).map(s => s.trim()).filter(Boolean);
+  const parts = loc.split(/[-–]/).map((s) => s.trim()).filter(Boolean);
   const letters = new Set<string>();
 
-  for (const seg of (parts.length ? parts : [loc])) {
+  for (const seg of parts.length ? parts : [loc]) {
     const m = seg.toUpperCase().match(/[A-ZÁÉÍÓÚÑ]/); // primera letra válida
     if (m) letters.add(m[0]);
   }
@@ -18,12 +20,12 @@ function extractAisleLetters(location?: string): string[] {
   return letters.size ? Array.from(letters) : ['#'];
 }
 
-export function computeAisleStats(rows: ProductOrder[]) {
+export function computeAisleStats(rows: OrderDetailLine[], stage: Stage) {
   const m = new Map<string, { total: number; pending: number }>();
 
   rows.forEach((r) => {
     const letters = extractAisleLetters(r.location);
-    const isPending = r.package_scanned < r.package_total || r.unit_scanned < r.unit_total;
+    const isPending = !isLineComplete(r, stage);
 
     // Contamos este renglón en cada pasillo que menciona (A y D, por ejemplo)
     for (const letter of letters) {
@@ -40,11 +42,10 @@ export function computeAisleStats(rows: ProductOrder[]) {
 }
 
 export function filterAndSortRows(
-  rows: ProductOrder[],
+  rows: OrderDetailLine[],
   selectedAisle: 'ALL' | string,
   sortKey: 'location' | 'sku',
-  sortDir: 'asc' | 'desc',
-  productMap: Map<string, Product>
+  sortDir: 'asc' | 'desc'
 ) {
   const filtered = rows.filter((r) => {
     if (selectedAisle === 'ALL') return true;
@@ -61,15 +62,15 @@ export function filterAndSortRows(
       const c = la.localeCompare(lb, 'es', { sensitivity: 'base' });
       if (c !== 0) return c * dir;
 
-      const sa = (productMap.get(String(a.product_id))?.sku ?? '').toString();
-      const sb = (productMap.get(String(b.product_id))?.sku ?? '').toString();
+      const sa = (a.product?.sku ?? '').toString();
+      const sb = (b.product?.sku ?? '').toString();
       const c2 = sa.localeCompare(sb, 'es', { sensitivity: 'base' });
       if (c2 !== 0) return c2 * dir;
 
       return (a.id - b.id) * dir;
     } else {
-      const sa = (productMap.get(String(a.product_id))?.sku ?? '').toString();
-      const sb = (productMap.get(String(b.product_id))?.sku ?? '').toString();
+      const sa = (a.product?.sku ?? '').toString();
+      const sb = (b.product?.sku ?? '').toString();
       const c = sa.localeCompare(sb, 'es', { sensitivity: 'base' });
       if (c !== 0) return c * dir;
 
@@ -83,16 +84,16 @@ export function filterAndSortRows(
   });
 }
 
-export function getPendientes(rows: ProductOrder[]) {
-  return rows.filter((r) => r.package_scanned < r.package_total || r.unit_scanned < r.unit_total);
+export function getPendientes(rows: OrderDetailLine[], stage: Stage) {
+  return rows.filter((r) => !isLineComplete(r, stage));
 }
 
-export function pendientesResumen(pend: ProductOrder[], productMap: Map<string, Product>) {
+export function pendientesResumen(pend: OrderDetailLine[], stage: Stage) {
   const lines = pend.slice(0, 5).map((r) => {
-    const p = productMap.get(String(r.product_id));
-    const remP = Math.max(0, r.package_total - r.package_scanned);
-    const remU = Math.max(0, r.unit_total - r.unit_scanned);
-    const etiqueta = p ? `${p.sku} • ${p.description}` : `Artículo ${r.product_id}`;
+    const p = progressOf(r, stage);
+    const remP = Math.max(0, p.pkgTotal - p.pkgDone);
+    const remU = Math.max(0, p.unitTotal - p.unitDone);
+    const etiqueta = `${r.product.sku} • ${r.product.description}`;
     const partes: string[] = [];
     if (remP > 0) partes.push(`${remP} bulto/s`);
     if (remU > 0) partes.push(`${remU} unidad/es`);

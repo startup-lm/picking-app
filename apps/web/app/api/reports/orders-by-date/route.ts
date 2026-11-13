@@ -1,24 +1,29 @@
-// app/api/reports/orders-by-date/route.ts
-import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
+import type { ReportDay } from '@/types/rpc';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
+  const db = getUserClient(req);
+  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+
   const { searchParams } = new URL(req.url);
   const from = searchParams.get('from') || '';
-  const to   = searchParams.get('to')   || '';
-  const tz   = 'America/Argentina/Buenos_Aires';
+  const to = searchParams.get('to') || '';
 
   if (!from || !to) {
-    return new Response('Parámetros "from" y "to" requeridos (YYYY-MM-DD).', { status: 400 });
+    return jsonError(400, 'invalid_argument', 'Parámetros "from" y "to" requeridos (YYYY-MM-DD).');
   }
 
-  const { data, error } = await supabaseAdmin.rpc('api_report_orders_by_date', {
-    p_from: from, p_to: to, p_tz: tz
+  const { data, error } = await db.rpc('api_report_orders', {
+    p_from: from,
+    p_to: to,
   });
-  if (error) return new Response(error.message, { status: 500 });
 
-  // data: [{ day: 'YYYY-MM-DD', orders: [...] }, ...]
-  return Response.json({ groups: data ?? [] });
+  if (error) {
+    return rpcErrorResponse(error);
+  }
+
+  return NextResponse.json({ groups: (data ?? []) as ReportDay[] });
 }

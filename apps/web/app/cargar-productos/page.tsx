@@ -5,9 +5,33 @@ import { useRouter } from 'next/navigation';
 import { validateCsvFile } from '@/lib/validators/file';
 import { processProductsCsv } from '@/lib/api/products';
 import { useToast } from '@/hooks/useToast';
+import { errorMessage } from '@/lib/errors';
+import type { ImportError } from '@/types/rpc';
 
-type ProcessOk = { file: File; processed: number; duplicates: number; totalRows: number };
+type ProcessOk = {
+  file: File;
+  created: number;
+  updated: number;
+  errors: ImportError[];
+};
 type ProcessFail = { file: File; error: string };
+
+function formatProductResult(o: ProcessOk): string {
+  const lines = [
+    `Archivo: ${o.file.name}`,
+    `Creados: ${o.created} · Actualizados: ${o.updated} · Errores: ${o.errors.length}`,
+  ];
+  if (o.errors.length > 0) {
+    const errPreview = o.errors
+      .slice(0, 5)
+      .map(e => `• fila ${e.row}: ${errorMessage(e.code)}`);
+    if (o.errors.length > 5) {
+      errPreview.push(`• … y ${o.errors.length - 5} errores más`);
+    }
+    lines.push(errPreview.join('\n'));
+  }
+  return lines.join('\n');
+}
 
 export default function CargarProductosPage() {
   const router = useRouter();
@@ -71,9 +95,9 @@ export default function CargarProductosPage() {
         const res = await processProductsCsv({ file: f });
         oks.push({
           file: f,
-          processed: res.processed,
-          duplicates: res.duplicates,
-          totalRows: res.total_rows,
+          created: res.created,
+          updated: res.updated,
+          errors: res.errors || [],
         });
       } catch (err: any) {
         fails.push({ file: f, error: err?.message ?? 'Fallo al procesar' });
@@ -85,45 +109,29 @@ export default function CargarProductosPage() {
     if (oks.length && !fails.length) {
       if (oks.length === 1) {
         const o = oks[0];
+        const title = o.errors.length === 0 ? 'Productos importados' : 'Productos importados con observaciones';
         show({
-          title: 'Productos cargados',
-          description:
-            `Archivo: ${o.file.name}\n` +
-            `Filas con SKU: ${o.totalRows}\n` +
-            `Procesados: ${o.processed}\n` +
-            `Duplicados en archivo: ${o.duplicates}`,
-          variant: 'success',
+          title,
+          description: formatProductResult(o),
+          variant: o.errors.length === 0 ? 'success' : 'info',
         });
       } else {
-        const detail = oks
-          .map(o =>
-            `Archivo: ${o.file.name}\n` +
-            `Filas con SKU: ${o.totalRows}\n` +
-            `Procesados: ${o.processed}\n` +
-            `Duplicados en archivo: ${o.duplicates}`
-          )
-          .join('\n\n');
+        const detail = oks.map(formatProductResult).join('\n\n');
+        const hasAnyErrors = oks.some(o => o.errors.length > 0);
         show({
           title: `Archivos procesados: ${oks.length}`,
           description: detail,
-          variant: 'success',
+          variant: hasAnyErrors ? 'info' : 'success',
         });
       }
       resetForm();
     } else if (oks.length && fails.length) {
-      const okDetail = oks
-        .map(o =>
-          `Archivo: ${o.file.name}\n` +
-          `Filas con SKU: ${o.totalRows}\n` +
-          `Procesados: ${o.processed}\n` +
-          `Duplicados en archivo: ${o.duplicates}`
-        )
-        .join('\n\n');
+      const okDetail = oks.map(formatProductResult).join('\n\n');
       const failDetail = fails.map(f => `• ${f.file.name}: ${f.error}`).join('\n');
 
       show({
         title: `Parcial: ${oks.length} OK · ${fails.length} con error`,
-        description: `${okDetail}\n\nErrores:\n${failDetail}`,
+        description: `${okDetail}\n\nArchivos con error:\n${failDetail}`,
         variant: 'info',
       });
 
@@ -141,7 +149,7 @@ export default function CargarProductosPage() {
   };
 
   const selectedCount = files.length;
-  const progressText = useMemo(() => busy ? `Procesando ${progress.done}/${progress.total}…` : '', [busy, progress]);
+  const progressText = useMemo(() => (busy ? `Procesando ${progress.done}/${progress.total}…` : ''), [busy, progress]);
 
   return (
     <div className="mt-10 rounded-xl border border-border bg-bg px-4 py-10 max-w-5xl mx-auto">
@@ -154,7 +162,7 @@ export default function CargarProductosPage() {
         >
           Volver
         </button>
-        <h1 className="text-center text-2xl font-bold">Cargar productos</h1>
+        <h1 className="text-center text-2xl font-bold">Cargar catálogo de productos</h1>
       </div>
 
       <div className="mt-10 space-y-6">

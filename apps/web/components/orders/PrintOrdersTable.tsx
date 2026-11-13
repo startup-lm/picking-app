@@ -1,26 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-
-type Row = {
-  id: number;
-  client: string | null;
-  created_at: string;
-};
-
-function formatDateTime(iso: string) {
-  const d = new Date(iso);
-  return new Intl.DateTimeFormat('es-AR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  }).format(d);
-}
+import type { OrderSummary } from '@/types/api';
+import { estadoLabel } from '@/utils/report';
+import { formatDateTime } from '@/utils/date';
 
 export default function PrintOrdersTable({
   orders,
   onPrint,
 }: {
-  orders: Row[];
+  orders: OrderSummary[];
   onPrint: (id: number) => void;
 }) {
   const has = useMemo(() => orders.length > 0, [orders.length]);
@@ -30,8 +19,9 @@ export default function PrintOrdersTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-muted">
-            <th className="py-2 pr-4">ID</th>
+            <th className="py-2 pr-4">Nro Pedido</th>
             <th className="py-2 pr-4">Cliente</th>
+            <th className="py-2 pr-4">Estado</th>
             <th className="py-2 pr-4">Creado</th>
             <th className="py-2 pr-0 text-right">Acciones</th>
           </tr>
@@ -39,8 +29,9 @@ export default function PrintOrdersTable({
         <tbody>
           {orders.map(o => (
             <tr key={o.id} className="border-t border-border">
-              <td className="py-2 pr-4 font-medium">#{o.id}</td>
-              <td className="py-2 pr-4">{o.client || '-'}</td>
+              <td className="py-2 pr-4 font-medium">{o.order_number}</td>
+              <td className="py-2 pr-4">{o.customer || '-'}</td>
+              <td className="py-2 pr-4">{estadoLabel(o.status)}</td>
               <td className="py-2 pr-4">{formatDateTime(o.created_at)}</td>
               <td className="py-2 pr-0 text-right">
                 <button
@@ -54,7 +45,7 @@ export default function PrintOrdersTable({
           ))}
           {!has && (
             <tr>
-              <td className="py-6 text-center text-muted" colSpan={4}>
+              <td className="py-6 text-center text-muted" colSpan={5}>
                 No hay pedidos.
               </td>
             </tr>

@@ -1,45 +1,30 @@
-export type ProcessOrderResponse = {
-  client: string;
-  order_id: number;
-  dispatch_id: number;
-  totals: { total_package: number; total_unit: number };
-  file_url: string;
-};
+import type { OrderStatus, ImportProductsResult, ReportDay } from '@/types/rpc';
 
-export type ProcessProductsResponse = {
-  processed: number;
-  duplicates: number;
-  total_rows: number;
-};
-
-export type OrderLine = {
-  sku: string;
-  description: string;
-  package_total: number;
-  unit_total: number;
-  package_scanned: number;
-  unit_scanned: number;
-};
-
-export type OrderWithLines = {
+export type OrderSummary = {
   id: number;
-  client: string;
+  order_number: string;
+  status: OrderStatus;
   created_at: string;
-  updated_at: string;
-  total_package: number;
-  total_unit: number;
-  order_status?: 'pending' | 'assembled' | null;
-  dispatch_status?: 'pending' | 'delivered' | null;
-  lines: OrderLine[];
+  customer: string;
 };
 
-export type DayGroup = {
-  day: string; // YYYY-MM-DD
-  orders: OrderWithLines[];
+export type ProcessOrderResponse = {
+  order_id: number;
+  order_number: string;
+  customer: string;
+  totals: {
+    total_package: number;
+    total_unit: number;
+  };
 };
 
-export type PendingOrder = {
-  id: number;
-  client: string | null;
-  created_at: string; // ISO
+export type CancelResponse = {
+  cancelled_ids: number[];
+  errors: {
+    id: number;
+    code: string;
+    message: string;
+  }[];
 };
+
+export type { ImportProductsResult, ReportDay, OrderStatus };

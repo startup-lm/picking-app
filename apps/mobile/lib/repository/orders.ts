@@ -1,115 +1,113 @@
-// lib/repository/orders.ts
-import { Alert } from 'react-native';
 import { supabase } from '@/lib/supabase/client';
-import type { Order } from '@/types/db';
+import type { OrderStatus, Stage, OrderLine } from '@/types/rpc';
 
-const TABLE = 'orders' as const;
-const COLUMNS = 'id, client, total_package, total_unit, status, created_at, updated_at';
-
-export type OrderUpdate = Partial<Omit<Order, 'id' | 'created_at' | 'updated_at'>>;
-
-export type GetOrdersOptions = {
-  status?: 'all' | 'pending' | 'assembled';
-  orderDir?: 'asc' | 'desc';
-  page?: number;
-  pageSize?: number;
+export type OrderListItem = {
+  id: number;
+  order_number: string;
+  status: OrderStatus;
+  priority: 'normal' | 'urgent';
+  due_date: string | null;
+  total_package: number;
+  total_unit: number;
+  created_at: string;
+  customer_name: string;
 };
 
-export async function getOrders(options: GetOrdersOptions = {}): Promise<Order[]> {
-  const {
-    status = 'all',
-    orderDir = 'desc',
-    page = 0,
-    pageSize = 25,
-  } = options;
+export type OrderDetailLine = OrderLine & {
+  product: {
+    sku: string;
+    description: string;
+    unit_barcode: string | null;
+    package_barcode: string | null;
+    units_per_package: number;
+  };
+};
 
-  try {
-    let query = supabase.from(TABLE).select(COLUMNS);
+export type OrderDetail = {
+  id: number;
+  order_number: string;
+  status: OrderStatus;
+  customer_name: string;
+  notes: string | null;
+  total_package: number;
+  total_unit: number;
+  lines: OrderDetailLine[];
+};
 
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
+export const STAGE_STATUSES: Record<Stage, OrderStatus[]> = {
+  picking: ['pending', 'in_progress'],
+  dispatch: ['assembled'],
+};
 
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
+export async function listOrders(
+  stage: Stage,
+  opts?: { orderDir?: 'asc' | 'desc'; page?: number; pageSize?: number }
+): Promise<OrderListItem[]> {
+  const orderDir = opts?.orderDir ?? 'desc';
+  const page = opts?.page ?? 0;
+  const pageSize = opts?.pageSize ?? 25;
 
-    const { data, error } = await query
-      .order('created_at', { ascending: orderDir === 'asc' })
-      .range(from, to);
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id, order_number, status, priority, due_date, total_package, total_unit, created_at, customer:customers(name)')
+    .in('status', STAGE_STATUSES[stage])
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: orderDir === 'asc' })
+    .range(page * pageSize, page * pageSize + pageSize - 1);
 
-    if (error) {
-      Alert.alert('Error', error.message ?? 'No se pudieron cargar los pedidos');
-      return [];
-    }
-    return (data ?? []) as Order[];
-  } catch (e: any) {
-    Alert.alert('Error', e?.message ?? 'Fallo inesperado al listar pedidos');
-    return [];
+  if (error) {
+    throw error;
   }
+
+  return ((data ?? []) as any[]).map((row) => ({
+    id: row.id,
+    order_number: row.order_number,
+    status: row.status as OrderStatus,
+    priority: row.priority as 'normal' | 'urgent',
+    due_date: row.due_date,
+    total_package: row.total_package,
+    total_unit: row.total_unit,
+    created_at: row.created_at,
+    customer_name: Array.isArray(row.customer)
+      ? row.customer[0]?.name ?? ''
+      : row.customer?.name ?? '',
+  }));
 }
 
-export async function getOrderById(id: number): Promise<Order | null> {
-  try {
-    const { data, error } = await supabase
-      .from(TABLE)
-      .select(COLUMNS)
-      .eq('id', id)
-      .maybeSingle();
+export async function getOrderDetail(id: number): Promise<OrderDetail | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      'id, order_number, status, notes, total_package, total_unit, customer:customers(name), lines:order_lines(*, product:products(sku, description, unit_barcode, package_barcode, units_per_package))'
+    )
+    .eq('id', id)
+    .maybeSingle();
 
-    if (error) {
-      Alert.alert('Error', error.message ?? 'No se pudo obtener el pedido');
-      return null;
-    }
-    return (data ?? null) as Order | null;
-  } catch (e: any) {
-    Alert.alert('Error', e?.message ?? 'Fallo inesperado al obtener el pedido');
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
     return null;
   }
-}
 
-export async function updateOrder(id: number, payload: OrderUpdate): Promise<Order | null> {
-  try {
-    const { data, error } = await supabase
-      .from(TABLE)
-      .update(payload)
-      .eq('id', id)
-      .select(COLUMNS)
-      .maybeSingle();
+  const customer_name = Array.isArray(data.customer)
+    ? (data.customer as any[])[0]?.name ?? ''
+    : (data.customer as any)?.name ?? '';
 
-    if (error) {
-      Alert.alert('Error', error.message ?? 'No se pudo actualizar el pedido');
-      return null;
-    }
-    if (!data) {
-      Alert.alert('Error', 'Pedido no encontrado o sin permisos');
-      return null;
-    }
-    return data as Order;
-  } catch (e: any) {
-    Alert.alert('Error', e?.message ?? 'Fallo inesperado al actualizar el pedido');
-    return null;
-  }
-}
+  const lines = ((data.lines ?? []) as any[]).map((l) => ({
+    ...l,
+    product: Array.isArray(l.product) ? l.product[0] : l.product,
+  })) as OrderDetailLine[];
 
-export async function deleteOrder(id: number): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from(TABLE)
-      .delete()
-      .eq('id', id)
-      .select('id'); // para confirmar borrado
-
-    if (error) {
-      Alert.alert('Error', error.message ?? 'No se pudo eliminar el pedido');
-      return false;
-    }
-    if (!data?.length) {
-      Alert.alert('Error', 'No se encontró el pedido o no tenés permisos');
-      return false;
-    }
-    return true;
-  } catch (e: any) {
-    Alert.alert('Error', e?.message ?? 'Fallo inesperado al eliminar el pedido');
-    return false;
-  }
+  return {
+    id: data.id,
+    order_number: data.order_number,
+    status: data.status as OrderStatus,
+    customer_name,
+    notes: data.notes,
+    total_package: data.total_package,
+    total_unit: data.total_unit,
+    lines,
+  };
 }

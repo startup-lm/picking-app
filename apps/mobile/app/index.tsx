@@ -9,18 +9,18 @@ import { Colors, type Palette } from '@/constants/theme';
 export default function HomeScreen() {
   const palette = Colors[useColorScheme() ?? 'light'];
   const styles = useMemo(() => makeStyles(palette), [palette]);
-  
+
   return (
     <ThemedView style={styles.container}>
       <Link href="/pedidos" asChild>
         <Pressable style={styles.card} android_ripple={{ borderless: false }}>
-          <ThemedText>PEDIDOS</ThemedText>
+          <ThemedText>PREPARAR</ThemedText>
         </Pressable>
       </Link>
 
       <Link href="/despachos" asChild>
         <Pressable style={styles.card} android_ripple={{ borderless: false }}>
-          <ThemedText>DESPACHOS</ThemedText>
+          <ThemedText>DESPACHAR</ThemedText>
         </Pressable>
       </Link>
     </ThemedView>

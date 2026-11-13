@@ -1,52 +1,60 @@
-import { PendingOrder, ProcessOrderResponse } from "@/types/api";
+import { authFetch, readError } from './http';
+import type { OrderSummary, ProcessOrderResponse, CancelResponse } from '@/types/api';
 
-export async function processOrderCsv(params: { file: File }) {
+export async function processOrderCsv(params: { file: File }): Promise<ProcessOrderResponse> {
   const { file } = params;
 
   const fd = new FormData();
   fd.append('file', file);
 
-  const res = await fetch('/api/orders/process-csv', {
+  const res = await authFetch('/api/orders/process-csv', {
     method: 'POST',
     body: fd,
   });
 
-  const text = await res.text();
-  if (!res.ok) throw new Error(text || 'Error procesando CSV');
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
 
-  return JSON.parse(text) as ProcessOrderResponse;
+  return (await res.json()) as ProcessOrderResponse;
 }
 
-export async function fetchPendingOrders(): Promise<PendingOrder[]> {
-  const url = `/api/orders/pending`;
-  const res = await fetch(url, {
+export async function fetchPendingOrders(): Promise<OrderSummary[]> {
+  const res = await authFetch('/api/orders/pending', {
     cache: 'no-store',
-    headers: {
-      'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-      Pragma: 'no-cache',
-      Expires: '0',
-    },
   });
+
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+
   const json = await res.json();
-  if (!res.ok) throw new Error(json?.message || 'No se pudieron obtener los pedidos pendientes');
-  return json.orders as PendingOrder[];
+  return json.orders as OrderSummary[];
 }
 
-export async function cancelOrders(ids: number[]): Promise<{ deleted_count: number; deleted_ids: number[] }> {
-  const res = await fetch('/api/orders/cancel', {
+export async function fetchAllOrders(): Promise<OrderSummary[]> {
+  const res = await authFetch('/api/orders/all', {
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+
+  const json = await res.json();
+  return json.orders as OrderSummary[];
+}
+
+export async function cancelOrders(ids: number[], reason: string): Promise<CancelResponse> {
+  const res = await authFetch('/api/orders/cancel', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids }),
+    body: JSON.stringify({ ids, reason }),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.message || 'No se pudieron cancelar los pedidos');
-  return json as { deleted_count: number; deleted_ids: number[] };
-}
 
-export async function fetchAllOrders(): Promise<PendingOrder[]> {
-  const url = `/api/orders/all?t=${Date.now()}`; // cache-buster
-  const res = await fetch(url, { cache: 'no-store', next: { revalidate: 0 } });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.message || 'No se pudieron obtener los pedidos');
-  return json.orders as PendingOrder[];
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+
+  return (await res.json()) as CancelResponse;
 }

@@ -1,72 +1,96 @@
 import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
 import { formatDate, formatDateTime } from '@/utils/date';
+import { estadoLabel } from '@/utils/report';
+import type { ReportDay } from '@/types/rpc';
 
 function csvEsc(s: any) {
   const t = s == null ? '' : String(s);
   const esc = t.replace(/"/g, '""');
-  return /[",\n]/.test(esc) ? `"${esc}"` : esc;
+  return /[",\n\r]/.test(esc) ? `"${esc}"` : esc;
 }
 
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
+  const db = getUserClient(req);
+  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+
   const { searchParams } = new URL(req.url);
   const from = searchParams.get('from') || '';
-  const to   = searchParams.get('to')   || '';
-  const tz   = 'America/Argentina/Buenos_Aires';
+  const to = searchParams.get('to') || '';
 
   if (!from || !to) {
-    return new Response('Parámetros "from" y "to" requeridos (YYYY-MM-DD).', { status: 400 });
+    return jsonError(400, 'invalid_argument', 'Parámetros "from" y "to" requeridos (YYYY-MM-DD).');
   }
 
-  const { data, error } = await supabaseAdmin.rpc('api_report_orders_by_date', {
-    p_from: from, p_to: to, p_tz: tz
+  const { data, error } = await db.rpc('api_report_orders', {
+    p_from: from,
+    p_to: to,
   });
-  if (error) return new Response(error.message, { status: 500 });
+
+  if (error) {
+    return rpcErrorResponse(error);
+  }
+
+  const groups = (data ?? []) as ReportDay[];
 
   const rows: string[] = [];
-  rows.push([
-    'Fecha',
-    'Nro Pedido',
-    'Cliente',
-    'Fecha armado',
-    'Cod Producto',
-    'Descripcion',
-    'Bultos',
-    'Unidades sueltas',
-    'Bultos escaneados',
-    'Uni sueltas escaneadas',
-  ].join(','));
+  rows.push(
+    [
+      'Fecha',
+      'Nro Pedido',
+      'Cliente',
+      'Estado',
+      'Armado',
+      'Armado por',
+      'Cod Producto',
+      'Descripcion',
+      'Ubicacion',
+      'Bultos',
+      'Unidades sueltas',
+      'Bultos escaneados',
+      'Uni sueltas escaneadas',
+    ].join(',')
+  );
 
-  for (const g of (data ?? [])) {
+  for (const g of groups) {
     const orders = Array.isArray(g.orders) ? g.orders : [];
 
     for (const o of orders) {
-      const fecha = formatDate(o.created_at); 
-      const fechaArmado = o.updated_at ? formatDateTime(o.updated_at) : '';
+      const fecha = formatDate(g.day);
+      const nroPedido = o.order_number;
+      const cliente = o.customer;
+      const estado = estadoLabel(o.status);
+      const armado = o.assembled_at ? formatDateTime(o.assembled_at) : '';
+      const armadoPor = o.assembled_by_name ?? '';
 
       const base = [
         csvEsc(fecha),
-        csvEsc(o.id),
-        csvEsc(o.client),
-        csvEsc(fechaArmado),
-      ].join(',');
+        csvEsc(nroPedido),
+        csvEsc(cliente),
+        csvEsc(estado),
+        csvEsc(armado),
+        csvEsc(armadoPor),
+      ];
 
       const lines = Array.isArray(o.lines) ? o.lines : [];
       if (lines.length === 0) {
-        rows.push(base + ',,,,,,');
+        rows.push([...base, '', '', '', '', '', '', ''].join(','));
       } else {
         for (const li of lines) {
-          rows.push([
-            base,
-            csvEsc(li.sku),
-            csvEsc(li.description),
-            csvEsc(li.package_total),
-            csvEsc(li.unit_total),
-            csvEsc(li.package_scanned),
-            csvEsc(li.unit_scanned),
-          ].join(','));
+          rows.push(
+            [
+              ...base,
+              csvEsc(li.sku),
+              csvEsc(li.description ?? ''),
+              csvEsc(li.location ?? ''),
+              csvEsc(li.package_total),
+              csvEsc(li.unit_total),
+              csvEsc(li.package_scanned),
+              csvEsc(li.unit_scanned),
+            ].join(',')
+          );
         }
       }
     }
@@ -77,7 +101,6 @@ export async function GET(req: NextRequest) {
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="reporte_pedidos_${from}_a_${to}.csv"`,
       'Cache-Control': 'no-store',
     },
   });

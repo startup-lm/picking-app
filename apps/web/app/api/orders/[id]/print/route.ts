@@ -1,59 +1,60 @@
 import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
 
 export const runtime = 'nodejs';
 
-type DBOrder = {
-  id: number;
-  client: string | null;
-  total_package: number | null;
-  total_unit: number | null;
-};
-
-type POLine = {
-  product_id: number;
-  location: string | null;
-  package_total: number | null;
-  unit_total: number | null;
-};
-
-type Product = { id: number; sku: string; description: string | null };
-
 function escapeHtml(s: string | undefined | null) {
   return String(s ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
 
 function slugify(input: string, max = 50) {
-  return (input ?? '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9\-_. ]+/g, ' ')
-    .trim().replace(/\s+/g, '_')
-    .slice(0, max) || 'cliente';
+  return (
+    (input ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\-_. ]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '_')
+      .slice(0, max) || 'cliente'
+  );
 }
 
-function buildOrderHTML(order: DBOrder, items: Array<{
-  product: Product,
-  bultos: number,
-  sueltas: number,
-  location: string
-}>, padRowsTo = 15) {
+function buildOrderHTML(
+  orderNumber: string,
+  customer: string,
+  totalPackage: number,
+  totalUnit: number,
+  items: Array<{
+    product: { sku: string; description: string | null };
+    bultos: number;
+    sueltas: number;
+    location: string;
+  }>,
+  padRowsTo = 15
+) {
   const filled =
     padRowsTo > items.length
-      ? [...items, ...Array.from({ length: padRowsTo - items.length }).map(() => ({
-        product: { id: 0, sku: '', description: '' } as Product,
-        bultos: 0,
-        sueltas: 0,
-        location: '',
-      }))] : items;
+      ? [
+          ...items,
+          ...Array.from({ length: padRowsTo - items.length }).map(() => ({
+            product: { sku: '', description: '' },
+            bultos: 0,
+            sueltas: 0,
+            location: '',
+          })),
+        ]
+      : items;
 
-  const rows = filled.map(it => {
-    const sku = String(it?.product?.sku ?? '').trim();
-    const b = sku ? (it?.bultos ?? 0) : '';   // si hay SKU: muestra bultos o 0; si no hay SKU: ''
-    const s = sku ? (it?.sueltas ?? 0) : '';  // idem para sueltas
+  const rows = filled
+    .map(it => {
+      const sku = String(it?.product?.sku ?? '').trim();
+      const b = sku ? (it?.bultos ?? 0) : '';
+      const s = sku ? (it?.sueltas ?? 0) : '';
 
-    return `
+      return `
     <tr>
       <td class="code">${escapeHtml(sku)}</td>
       <td class="desc">${escapeHtml(it?.product?.description ?? '')}</td>
@@ -62,16 +63,15 @@ function buildOrderHTML(order: DBOrder, items: Array<{
       <td class="num">${s}</td>
     </tr>
   `;
-  }).join('');
+    })
+    .join('');
 
-
-  // >>> MISMO CSS/estructura que tu Expo <<<
   return `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>pedido_${escapeHtml(String(order.id))}_${escapeHtml(slugify(String(order.client ?? '')))}.pdf</title>
+<title>pedido_${escapeHtml(orderNumber)}_${escapeHtml(slugify(customer))}.pdf</title>
 <style>
   @page { size: A4; margin: 5mm; }
   * { box-sizing: border-box; }
@@ -97,7 +97,7 @@ function buildOrderHTML(order: DBOrder, items: Array<{
 </head>
 <body>
   <div class="sheet">
-    <div class="title">${escapeHtml(String(order.client ?? ''))} - # ${escapeHtml(String(order.id))}</div>
+    <div class="title">${escapeHtml(customer)} - ${escapeHtml(orderNumber)}</div>
 
     <table>
       <thead>
@@ -115,13 +115,12 @@ function buildOrderHTML(order: DBOrder, items: Array<{
     </table>
 
     <div class="footer">
-      <div class="tot">TOTAL BULTOS: ${escapeHtml(String(order.total_package ?? 0))}</div>
-      <div class="tot">TOTAL UNIDADES: ${escapeHtml(String(order.total_unit ?? 0))}</div>
+      <div class="tot">TOTAL BULTOS: ${escapeHtml(String(totalPackage))}</div>
+      <div class="tot">TOTAL UNIDADES: ${escapeHtml(String(totalUnit))}</div>
     </div>
   </div>
 
   <script>
-    // Imprime automáticamente al cargar
     window.addEventListener('load', () => {
       setTimeout(() => window.print(), 50);
     });
@@ -131,50 +130,59 @@ function buildOrderHTML(order: DBOrder, items: Array<{
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const db = getUserClient(req);
+  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+
   const id = Number(params.id);
-  if (!Number.isFinite(id)) return new Response('ID inválido', { status: 400 });
+  if (!Number.isFinite(id) || id <= 0) return jsonError(400, 'invalid_argument', 'ID inválido');
 
-  // 1) Orden
-  const { data: order, error: e1 } = await supabaseAdmin
+  const { data: order, error } = await db
     .from('orders')
-    .select('id, client, total_package, total_unit')
+    .select(
+      'id, order_number, total_package, total_unit, customer:customers(name), lines:order_lines(location, package_total, unit_total, product:products(sku, description))'
+    )
     .eq('id', id)
-    .maybeSingle<DBOrder>();
-  if (e1) return new Response(e1.message, { status: 500 });
-  if (!order) return new Response('Pedido no encontrado', { status: 404 });
+    .maybeSingle();
 
-  // 2) Líneas
-  const { data: lines, error: e2 } = await supabaseAdmin
-    .from('product_order')
-    .select('product_id, location, package_total, unit_total')
-    .eq('order_id', id)
-    .order('id', { ascending: true }) as unknown as { data: POLine[]; error: any };
-  if (e2) return new Response(e2.message, { status: 500 });
+  if (error) return rpcErrorResponse(error);
+  if (!order) return jsonError(404, 'not_found', 'Pedido no encontrado');
 
-  // 3) Productos
-  const ids = Array.from(new Set((lines ?? []).map(l => l.product_id))).filter(Boolean);
-  let products: Product[] = [];
-  if (ids.length) {
-    const { data: prods, error: e3 } = await supabaseAdmin
-      .from('products')
-      .select('id, sku, description')
-      .in('id', ids);
-    if (e3) return new Response(e3.message, { status: 500 });
-    products = prods ?? [];
-  }
-  const pmap = new Map(products.map(p => [p.id, p]));
+  const customerName = (order.customer as any)?.name ?? 'Sin cliente';
+  const rawLines = (order.lines as any[]) ?? [];
 
-  const items = (lines ?? []).map(li => ({
-    product: pmap.get(li.product_id) ?? { id: li.product_id, sku: '', description: '' },
+  const sortedLines = [...rawLines].sort((a, b) => {
+    const locA = a.location?.trim() || '';
+    const locB = b.location?.trim() || '';
+    if (!locA && locB) return 1;
+    if (locA && !locB) return -1;
+    if (locA !== locB) return locA.localeCompare(locB);
+    const skuA = a.product?.sku?.trim() || '';
+    const skuB = b.product?.sku?.trim() || '';
+    return skuA.localeCompare(skuB);
+  });
+
+  const items = sortedLines.map(li => ({
+    product: {
+      sku: li.product?.sku ?? '',
+      description: li.product?.description ?? '',
+    },
     bultos: li.package_total ?? 0,
     sueltas: li.unit_total ?? 0,
     location: String(li.location ?? ''),
   }));
 
-  const html = buildOrderHTML(order, items, 15);
+  const html = buildOrderHTML(
+    order.order_number,
+    customerName,
+    order.total_package ?? 0,
+    order.total_unit ?? 0,
+    items,
+    15
+  );
+
   return new Response(html, {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' },

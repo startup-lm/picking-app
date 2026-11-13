@@ -1,0 +1,200 @@
+import React, { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { router } from 'expo-router';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
+import { supabase } from '@/lib/supabase/client';
+import { errorMessage } from '@/lib/errors';
+
+export default function LoginScreen() {
+  const scheme = useColorScheme() ?? 'light';
+  const palette = Colors[scheme];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      setError('Email o contraseña incorrectos');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError) {
+        const msg = authError.message ?? '';
+        if (
+          msg.includes('Invalid login credentials') ||
+          msg.includes('invalid_credentials')
+        ) {
+          setError('Email o contraseña incorrectos');
+        } else {
+          setError(errorMessage(authError));
+        }
+        return;
+      }
+
+      router.replace('/');
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ThemedView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.inner}
+      >
+        <View style={styles.card}>
+          <ThemedText type="subtitle" style={styles.title}>
+            Iniciar sesión
+          </ThemedText>
+
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>Email</ThemedText>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setError(null);
+              }}
+              placeholder="operador@ejemplo.com"
+              placeholderTextColor={palette.textMuted}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>Contraseña</ThemedText>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError(null);
+              }}
+              placeholder="••••••••"
+              placeholderTextColor={palette.textMuted}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <Pressable
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+            android_ripple={{ color: palette.borderSoft }}
+          >
+            {loading ? (
+              <ActivityIndicator color={palette.onPrimary} />
+            ) : (
+              <ThemedText type="defaultSemiBold" style={styles.buttonText}>
+                INGRESAR
+              </ThemedText>
+            )}
+          </Pressable>
+
+          {error ? (
+            <ThemedText style={styles.errorText}>
+              {error}
+            </ThemedText>
+          ) : null}
+        </View>
+      </KeyboardAvoidingView>
+    </ThemedView>
+  );
+}
+
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      padding: 20,
+    },
+    inner: {
+      width: '100%',
+      maxWidth: 400,
+      alignSelf: 'center',
+    },
+    card: {
+      backgroundColor: p.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+      padding: 24,
+      gap: 16,
+    },
+    title: {
+      textAlign: 'center',
+      marginBottom: 8,
+      color: p.text,
+    },
+    field: {
+      gap: 6,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: p.text,
+    },
+    input: {
+      height: 48,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: p.border,
+      backgroundColor: p.background,
+      color: p.text,
+      paddingHorizontal: 12,
+      fontSize: 16,
+    },
+    button: {
+      height: 48,
+      borderRadius: 8,
+      backgroundColor: p.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 8,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: p.onPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    errorText: {
+      color: p.danger,
+      textAlign: 'center',
+      fontSize: 14,
+      marginTop: 4,
+    },
+  });

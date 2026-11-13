@@ -1,18 +1,20 @@
-import { ProcessProductsResponse } from '@/types/api';
+import { authFetch, readError } from './http';
+import type { ImportProductsResult } from '@/types/rpc';
 
-export async function processProductsCsv(params: { file: File }) {
+export async function processProductsCsv(params: { file: File }): Promise<ImportProductsResult> {
   const { file } = params;
 
   const fd = new FormData();
   fd.append('file', file);
 
-  const res = await fetch('/api/products/process-csv', {
+  const res = await authFetch('/api/products/process-csv', {
     method: 'POST',
     body: fd,
   });
 
-  const text = await res.text();
-  if (!res.ok) throw new Error(text || 'Error procesando CSV');
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
 
-  return JSON.parse(text) as ProcessProductsResponse;
+  return (await res.json()) as ImportProductsResult;
 }

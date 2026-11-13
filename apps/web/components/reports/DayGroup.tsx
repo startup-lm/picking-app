@@ -1,11 +1,11 @@
 'use client';
 
-import { DayGroup } from '@/types/api';
+import type { ReportDay } from '@/types/rpc';
 import OrderLinesTable from './OrderLinesTable';
 import { formatDate, formatDateTime } from '@/utils/date';
 import { estadoLabel } from '@/utils/report';
 
-export default function DayGroupView({ group }: { group: DayGroup }) {
+export default function DayGroupView({ group }: { group: ReportDay }) {
   const orders = group.orders || [];
 
   return (
@@ -16,19 +16,29 @@ export default function DayGroupView({ group }: { group: DayGroup }) {
 
       <div className="space-y-6">
         {orders.map((o) => {
-          const estado = estadoLabel(o.order_status, o.dispatch_status);
+          const estado = estadoLabel(o.status);
+          const armadoInfo = o.assembled_at
+            ? `Armado: ${formatDateTime(o.assembled_at)}${o.assembled_by_name ? ` por ${o.assembled_by_name}` : ''}`
+            : '';
+          const despachoInfo = o.dispatched_at
+            ? ` · Despachado: ${formatDateTime(o.dispatched_at)}`
+            : '';
+
           return (
             <div key={o.id} className="rounded-lg border border-border bg-card p-4">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 text-sm">
                 <div>
-                  Pedido #{o.id} — {o.client} — Estado: <strong>{estado}</strong>
+                  Pedido <strong>{o.order_number}</strong> — {o.customer} — Estado: <strong>{estado}</strong>
                 </div>
-                <div>
+                <div className="text-muted">
                   Bultos totales: {o.total_package} — Unidades totales: {o.total_unit}
                 </div>
-                <div>
-                  Última actualización: {formatDateTime(o.updated_at)}
-                </div>
+                {(armadoInfo || despachoInfo) && (
+                  <div className="text-xs text-muted">
+                    {armadoInfo}
+                    {despachoInfo}
+                  </div>
+                )}
               </div>
 
               <OrderLinesTable lines={o.lines} />

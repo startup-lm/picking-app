@@ -18,6 +18,7 @@ export type ArmadoParse = {
 };
 
 export type ProductCsvItem = {
+  row: number;
   sku: string;
   description: string;
   packageCode: string;

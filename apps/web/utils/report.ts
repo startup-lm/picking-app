@@ -1,23 +1,35 @@
-// utils/report.ts
-export type EstadoFiltro = 'todos' | 'pendiente' | 'armado' | 'entregado';
+import type { OrderStatus } from '@/types/rpc';
 
-export function estadoLabel(
-  order_status?: string | null,
-  dispatch_status?: string | null
-): 'Pendiente' | 'Armado' | 'Entregado' {
-  if (dispatch_status === 'delivered') return 'Entregado';
-  if (order_status === 'assembled') return 'Armado';
-  return 'Pendiente'; // por defecto y para 'pending'
+export type EstadoFiltro = 'todos' | 'armado' | 'despachado';
+
+export function estadoLabel(status: OrderStatus | string | null | undefined): string {
+  switch (status) {
+    case 'draft':
+      return 'Borrador';
+    case 'pending':
+      return 'Pendiente';
+    case 'in_progress':
+      return 'En preparación';
+    case 'assembled':
+      return 'Armado';
+    case 'dispatched':
+      return 'Despachado';
+    case 'cancelled':
+      return 'Cancelado';
+    default:
+      return 'Desconocido';
+  }
 }
 
 export function matchEstadoFiltro(
   filtro: EstadoFiltro,
-  order: { order_status?: string | null; dispatch_status?: string | null }
-) {
+  target: OrderStatus | string | null | undefined | { status?: OrderStatus | string | null }
+): boolean {
   if (filtro === 'todos') return true;
-  const label = estadoLabel(order.order_status, order.dispatch_status);
-  if (filtro === 'pendiente') return label === 'Pendiente';
-  if (filtro === 'armado')    return label === 'Armado';
-  if (filtro === 'entregado') return label === 'Entregado';
+  const status = typeof target === 'object' && target !== null && 'status' in target
+    ? target.status
+    : target;
+  if (filtro === 'armado') return status === 'assembled';
+  if (filtro === 'despachado') return status === 'dispatched';
   return true;
 }
