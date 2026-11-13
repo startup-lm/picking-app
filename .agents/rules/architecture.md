@@ -1,9 +1,9 @@
 # Arquitectura del Monorepo y Flujo de Datos
 
 ## 1. Topología del Monorepo
-El repositorio está organizado como un npm workspace:
+El repositorio está organizado como un monorepo con aplicaciones aisladas:
 ```
-picking-app/
+pickflow/
 ├── apps/
 │   ├── web/        # Panel de control administrativo (Next.js 14)
 │   └── mobile/     # Aplicación de operario en depósito (Expo 54)

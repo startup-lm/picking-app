@@ -60,7 +60,7 @@ function LoginForm() {
           <div className="w-full flex justify-center">
             <button
               onClick={closeModal}
-              className="rounded-lg border border-border bg-yellow px-4 py-2 text-sm font-semibold"
+              className="rounded-lg border border-border bg-accent px-4 py-2 text-sm font-semibold text-text"
             >
               Cerrar
             </button>
@@ -108,7 +108,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex items-center justify-center rounded-lg border border-border bg-yellow px-6 py-2 font-bold text-text disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-lg border border-border bg-accent px-6 py-2 font-bold text-text disabled:opacity-60"
           >
             {busy ? 'Ingresando…' : 'Ingresar'}
           </button>

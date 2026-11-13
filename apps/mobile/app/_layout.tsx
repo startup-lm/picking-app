@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { APP_NAME } from '@/constants/brand';
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -19,7 +20,7 @@ export default function RootLayout() {
           headerBackButtonDisplayMode: 'minimal',
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'PICKING APP' }} />
+        <Stack.Screen name="index" options={{ title: APP_NAME.toUpperCase() }} />
         <Stack.Screen name="pedidos/index" options={{ title: 'PEDIDOS' }} />
         <Stack.Screen name="pedidos/[id]" options={{ title: 'PEDIDO' }} />
         <Stack.Screen name="despachos/index" options={{ title: 'DESPACHOS' }} />

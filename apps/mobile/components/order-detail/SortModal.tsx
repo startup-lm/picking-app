@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 
 const CONTROL_HEIGHT = 44;
 
@@ -13,6 +15,8 @@ type Props = {
 };
 
 export default function SortModal({ visible, sortKey, sortDir, onClose, onApply }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const [tmpKey, setTmpKey] = useState<typeof sortKey>(sortKey);
   const [tmpDir, setTmpDir] = useState<typeof sortDir>(sortDir);
 
@@ -60,21 +64,22 @@ export default function SortModal({ visible, sortKey, sortDir, onClose, onApply 
   );
 }
 
-const styles = StyleSheet.create({
-  modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20,
-  },
-  modalCard: {
-    width: '100%', maxWidth: 420, backgroundColor: '#FFF', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E5E7EB',
-  },
-  choiceRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  choiceBtn: {
-    flex: 1, height: CONTROL_HEIGHT, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF',
-  },
-  choiceActive: { backgroundColor: '#FDE68A', borderColor: '#1F2937' },
-  modalActions: { marginTop: 34, flexDirection: 'row', justifyContent: 'center', gap: 10 },
-  actionBtn: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: '#D1D5DB' },
-  cancelBtn: { backgroundColor: '#F3F4F6' },
-  okBtn: { backgroundColor: '#FDE68A' },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    modalBackdrop: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20,
+    },
+    modalCard: {
+      width: '100%', maxWidth: 420, backgroundColor: p.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: p.borderSoft,
+    },
+    choiceRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+    choiceBtn: {
+      flex: 1, height: CONTROL_HEIGHT, borderWidth: 1, borderColor: p.borderSoft, borderRadius: 8,
+      alignItems: 'center', justifyContent: 'center', backgroundColor: p.surface,
+    },
+    choiceActive: { backgroundColor: p.accentSoft, borderColor: p.accent },
+    modalActions: { marginTop: 34, flexDirection: 'row', justifyContent: 'center', gap: 10 },
+    actionBtn: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: p.borderSoft },
+    cancelBtn: { backgroundColor: p.surfaceAlt },
+    okBtn: { backgroundColor: p.accent },
+  });

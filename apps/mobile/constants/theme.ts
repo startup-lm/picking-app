@@ -3,48 +3,50 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    // Header (Stack)
-    headerBg:    '#C62828',
-    headerTitle: '#FFD600',
-    headerTint:  '#FFFFFF',
-
-    // Contenido
-    text:        '#111827',
-    background:  '#F3F3F3',
-    surface:     '#FFFFFF',
-    border:      '#BDBDBD',
-
-    // Accentos / estados
-    accent:      '#FACC15',
-    danger:      '#C0392B',
-    success:     '#2E7D32',
-
-    // Compat (template)
-    tint:            '#FACC15',
-    icon:            '#687076',
+    headerBg: '#0F4C5C',
+    headerTitle: '#FFFFFF',
+    headerTint: '#FFFFFF',
+    primary: '#0F4C5C',
+    onPrimary: '#FFFFFF',
+    accent: '#F2A541',
+    accentSoft: '#FCE7C8',
+    onAccent: '#111827',
+    text: '#111827',
+    textMuted: '#4B5563',
+    background: '#F3F4F6',
+    surface: '#FFFFFF',
+    surfaceAlt: '#E5E7EB',
+    border: '#BDBDBD',
+    borderSoft: '#E5E7EB',
+    danger: '#C0392B',
+    success: '#2E7D32',
+    tint: '#0F4C5C',
+    icon: '#687076',
   },
-
   dark: {
-    // Mismos colores de header y acentos (si querés cambiar, lo hacés acá)
-    headerBg:    '#C62828',
-    headerTitle: '#FFD600',
-    headerTint:  '#FFFFFF',
-
-    // Si querés mantener texto NEGRO también en dark, lo dejamos igual
-    text:        '#111827',
-    background:  '#F3F3F3',
-    surface:     '#FFFFFF',
-    border:      '#BDBDBD',
-
-    accent:      '#FACC15',
-    danger:      '#C0392B',
-    success:     '#2E7D32',
-
-    // Compat (template)
-    tint:            '#FACC15',
-    icon:            '#9BA1A6',
+    headerBg: '#0A3540',
+    headerTitle: '#FFFFFF',
+    headerTint: '#FFFFFF',
+    primary: '#5FB3C7',
+    onPrimary: '#000000',
+    accent: '#F2A541',
+    accentSoft: '#4A3415',
+    onAccent: '#000000',
+    text: '#F9FAFB',
+    textMuted: '#D1D5DB',
+    background: '#000000',
+    surface: '#111827',
+    surfaceAlt: '#1F2937',
+    border: '#6B7280',
+    borderSoft: '#374151',
+    danger: '#FF6B5B',
+    success: '#4ADE80',
+    tint: '#5FB3C7',
+    icon: '#D1D5DB',
   },
 };
+
+export type Palette = typeof Colors.light;
 
 export const Fonts = Platform.select({
   ios: {

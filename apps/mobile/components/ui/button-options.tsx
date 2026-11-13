@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 type Props = {
   onPress: () => void;
@@ -9,10 +11,12 @@ type Props = {
   accessibilityLabel?: string;
 };
 
-export default function ButtonOptions({ onPress, size = 22, color = '#111827', style, accessibilityLabel = 'Abrir menú', }: Props) {
+export default function ButtonOptions({ onPress, size = 22, color, style, accessibilityLabel = 'Abrir menú', }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const iconColor = color ?? palette.text;
   return (
     <Pressable onPress={onPress} hitSlop={10} style={[styles.btn, style]} accessibilityRole="button" accessibilityLabel={accessibilityLabel} >
-      <MaterialIcons name="more-vert" size={size} color={color} />
+      <MaterialIcons name="more-vert" size={size} color={iconColor} />
     </Pressable>
   );
 }

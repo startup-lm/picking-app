@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -6,6 +6,8 @@ import { ThemedView } from '@/components/themed-view';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import ButtonOptions from '@/components/ui/button-options';
 import MenuOptions from '@/components/ui/menu-options';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 import type { Order } from '@/types/db';
 import { getOrders } from '@/lib/repository/orders';
 import { generateOrderPdfFromDb } from '@/lib/print/printOrder';
@@ -14,6 +16,9 @@ import { openOrSharePdf } from '@/lib/print/openPDF';
 const PAGE_SIZE = 25;
 
 export default function PedidosScreen() {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
+
   // menú contextual
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number; w: number; h: number }>();
@@ -279,82 +284,83 @@ export default function PedidosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  filterBox: {
-    backgroundColor: '#EFEFEF',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 8,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  filterLabel: {
-    color: '#374151',
-    fontSize: 13,
-    width: 52,
-  },
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-    flex: 1,
-  },
-  chip: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  chipActive: {
-    backgroundColor: '#FDE68A',
-    borderColor: '#1F2937',
-  },
-  chipText: {
-    color: '#4B5563',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  chipTextActive: {
-    color: '#111827',
-    fontWeight: '700',
-  },
-  separator: { height: 12 },
-  row: {
-    position: 'relative',
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    overflow: 'visible',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rowMain: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  sub: { opacity: 0.7, marginTop: 2 },
-  estado: { fontSize: 16, fontWeight: '600', marginRight: 8 },
-  pendiente: { color: '#C0392B' },
-  completado: { color: '#2E7D32' },
-  moreBox: {
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: 8,
-    paddingLeft: 4,
-  },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    container: { flex: 1, padding: 16, gap: 12 },
+    filterBox: {
+      backgroundColor: p.surfaceAlt,
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+      gap: 8,
+    },
+    filterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    filterLabel: {
+      color: p.text,
+      fontSize: 13,
+      width: 52,
+    },
+    pillsRow: {
+      flexDirection: 'row',
+      gap: 6,
+      flexWrap: 'wrap',
+      flex: 1,
+    },
+    chip: {
+      paddingVertical: 5,
+      paddingHorizontal: 10,
+      borderRadius: 999,
+      backgroundColor: p.surface,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+    },
+    chipActive: {
+      backgroundColor: p.accentSoft,
+      borderColor: p.accent,
+    },
+    chipText: {
+      color: p.textMuted,
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    chipTextActive: {
+      color: p.text,
+      fontWeight: '700',
+    },
+    separator: { height: 12 },
+    row: {
+      position: 'relative',
+      borderRadius: 8,
+      backgroundColor: p.surface,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+      overflow: 'visible',
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    rowMain: {
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    sub: { opacity: 0.7, marginTop: 2 },
+    estado: { fontSize: 16, fontWeight: '600', marginRight: 8 },
+    pendiente: { color: p.danger },
+    completado: { color: p.success },
+    moreBox: {
+      position: 'relative',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingRight: 8,
+      paddingLeft: 4,
+    },
+  });

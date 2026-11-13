@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal, View, Pressable, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ThemedText } from '@/components/themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 
 export type BarcodeResult = { data: string; type: string };
 
@@ -23,6 +25,8 @@ export default function ScannerModal({
   title = 'Escanear código',
   scanOnce = true,
 }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
@@ -113,7 +117,7 @@ export default function ScannerModal({
               </ThemedText>
             ) : (
               // Pequeño placeholder mientras se cierra el modal desde el parent
-              <ThemedText style={{ color: '#fff', opacity: 0.7 }}>Procesando…</ThemedText>
+              <ThemedText style={styles.processingText}>Procesando…</ThemedText>
             )}
           </View>
         )}
@@ -124,7 +128,7 @@ export default function ScannerModal({
             {title}
           </ThemedText>
           <Pressable style={styles.closeBtn} onPress={onClose}>
-            <ThemedText type="defaultSemiBold" style={{ color: '#fff' }}>
+            <ThemedText type="defaultSemiBold" style={styles.closeBtnText}>
               Cerrar
             </ThemedText>
           </Pressable>
@@ -137,38 +141,43 @@ export default function ScannerModal({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  camera: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  topBar: {
-    position: 'absolute',
-    top: 48,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  topBarTitle: {
-    color: '#fff',
-    fontSize: 16,
-    flex: 1,
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  aimBox: {
-    position: 'absolute',
-    top: '25%',
-    left: '10%',
-    right: '10%',
-    height: '35%',
-    borderWidth: 2,
-    borderColor: '#fff',
-    borderRadius: 12,
-    opacity: 0.6,
-  },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#000000' }, // fondo de cámara, no es token de tema
+    camera: { flex: 1 },
+    center: { alignItems: 'center', justifyContent: 'center' },
+    processingText: { color: p.onPrimary, opacity: 0.7 },
+    topBar: {
+      position: 'absolute',
+      top: 48,
+      left: 20,
+      right: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    topBarTitle: {
+      color: p.onPrimary,
+      fontSize: 16,
+      flex: 1,
+    },
+    closeBtn: {
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+    },
+    closeBtnText: {
+      color: p.onPrimary,
+    },
+    aimBox: {
+      position: 'absolute',
+      top: '25%',
+      left: '10%',
+      right: '10%',
+      height: '35%',
+      borderWidth: 2,
+      borderColor: p.onPrimary,
+      borderRadius: 12,
+      opacity: 0.6,
+    },
+  });

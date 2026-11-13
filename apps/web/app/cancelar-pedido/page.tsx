@@ -179,7 +179,7 @@ export default function CancelarPedidoPage() {
           <button
             onClick={askCancel}
             disabled={!canCancel}
-            className="rounded-lg border border-border bg-red px-4 py-2 text-sm font-semibold text-text hover:opacity-90 disabled:opacity-60"
+            className="rounded-lg border border-border bg-danger px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
           >
             Cancelar seleccionados
           </button>

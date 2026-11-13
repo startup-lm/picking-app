@@ -7,16 +7,16 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                bg: "#F3F3F3",
+                bg: "#F3F4F6",
                 card: "#FFFFFF",
                 border: "#BDBDBD",
                 muted: "#9ca3af",
-                accent: "#fde68a",
-                yellow: "#FFD600",
-                red: "#C62828",
+                primary: "#0F4C5C",
+                accent: "#F2A541",
+                accentSoft: "#FCE7C8",
                 text: "#111827",
-                danger: '#C0392B',
-                success: '#2E7D32',
+                danger: "#C0392B",
+                success: "#2E7D32",
                 bgInput: "#FFFFFF"
             }
         },
