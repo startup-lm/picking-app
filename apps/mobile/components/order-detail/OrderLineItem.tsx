@@ -4,44 +4,44 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, type Palette } from '@/constants/theme';
-import type { Product, ProductOrder } from '@/types/db';
+import type { OrderDetailLine } from '@/lib/repository/orders';
+import type { Stage } from '@/types/rpc';
+import { progressOf } from '@/utils/progress';
 
 type Props = {
-  item: ProductOrder;
-  productMap: Map<string, Product> | Record<number, Product>;
-  onLongPress?: (item: ProductOrder) => void;
+  line: OrderDetailLine;
+  stage: Stage;
+  onLongPress?: (line: OrderDetailLine) => void;
 };
 
-export default function ProductOrderItem({ item, productMap, onLongPress }: Props) {
+export default function OrderLineItem({ line, stage, onLongPress }: Props) {
   const palette = Colors[useColorScheme() ?? 'light'];
   const styles = useMemo(() => makeStyles(palette), [palette]);
-  const prod =
-    productMap instanceof Map
-      ? productMap.get(String(item.product_id))
-      : (productMap as Record<number, Product>)[item.product_id];
+
+  const progress = progressOf(line, stage);
 
   return (
     <Pressable
-      onLongPress={() => onLongPress?.(item)}
+      onLongPress={() => onLongPress?.(line)}
       delayLongPress={500}
       android_ripple={{ color: palette.borderSoft }}
     >
       <ThemedView style={styles.row}>
         <ThemedText
           type="defaultSemiBold"
-          style={[styles.title, !item.location && styles.noLocation]}
+          style={[styles.title, !line.location && styles.noLocation]}
         >
-          {item.location ? item.location : 'Sin ubicación'}
+          {line.location ? line.location : 'Sin ubicación'}
         </ThemedText>
         <ThemedText style={styles.sub}>
-          {prod ? `${prod.sku} • ${prod.description}` : `Artículo ${item.product_id}`}
+          {line.product ? `${line.product.sku} • ${line.product.description}` : `Artículo ${line.product_id}`}
         </ThemedText>
         <View style={styles.metaBox}>
           <ThemedText style={styles.meta}>
-            {`${item.package_scanned} / ${item.package_total} bultos escaneados`}
+            {`${progress.pkgDone} / ${progress.pkgTotal} bultos`}
           </ThemedText>
           <ThemedText style={styles.meta}>
-            {`${item.unit_scanned} / ${item.unit_total} unidades escaneadas`}
+            {`${progress.unitDone} / ${progress.unitTotal} unidades`}
           </ThemedText>
         </View>
       </ThemedView>
