@@ -5,7 +5,7 @@ import { fakeSupabase, fakeSupabaseAdmin } from './helpers/fake-supabase';
 let currentClient = fakeSupabase();
 
 vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: () => currentClient,
+  createSupabaseServerClient: async () => currentClient,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -57,13 +57,13 @@ const routes: RouteCase[] = [
   },
   {
     name: 'GET /api/orders/[id]',
-    handler: (req) => getOrder(req, { params: { id: '1' } }),
+    handler: (req) => getOrder(req, { params: Promise.resolve({ id: '1' }) }),
     method: 'GET',
     url: 'http://localhost/api/orders/1',
   },
   {
     name: 'POST /api/orders/[id]/status',
-    handler: (req) => postOrderStatus(req, { params: { id: '1' } }),
+    handler: (req) => postOrderStatus(req, { params: Promise.resolve({ id: '1' }) }),
     method: 'POST',
     url: 'http://localhost/api/orders/1/status',
   },
@@ -75,7 +75,7 @@ const routes: RouteCase[] = [
   },
   {
     name: 'GET /api/orders/[id]/print',
-    handler: (req) => getOrdersPrint(req, { params: { id: '1' } }),
+    handler: (req) => getOrdersPrint(req, { params: Promise.resolve({ id: '1' }) }),
     method: 'GET',
     url: 'http://localhost/api/orders/1/print',
   },
@@ -111,7 +111,7 @@ const routes: RouteCase[] = [
   },
   {
     name: 'PATCH /api/users/[id]',
-    handler: (req) => patchUser(req, { params: { id: '1' } }),
+    handler: (req) => patchUser(req, { params: Promise.resolve({ id: '1' }) }),
     method: 'PATCH',
     url: 'http://localhost/api/users/1',
   },
@@ -177,7 +177,7 @@ const routes: RouteCase[] = [
   },
   {
     name: 'PATCH /api/products/[id]',
-    handler: (req) => patchProduct(req, { params: { id: '1' } }),
+    handler: (req) => patchProduct(req, { params: Promise.resolve({ id: '1' }) }),
     method: 'PATCH',
     url: 'http://localhost/api/products/1',
   },
@@ -195,7 +195,7 @@ const routes: RouteCase[] = [
   },
   {
     name: 'PATCH /api/customers/[id]',
-    handler: (req) => patchCustomer(req, { params: { id: '1' } }),
+    handler: (req) => patchCustomer(req, { params: Promise.resolve({ id: '1' }) }),
     method: 'PATCH',
     url: 'http://localhost/api/customers/1',
   },

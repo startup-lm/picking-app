@@ -16,7 +16,7 @@ function makeAdminSupabase(opts: any = {}) {
 let currentClient = makeAdminSupabase();
 
 vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: () => currentClient,
+  createSupabaseServerClient: async () => currentClient,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -246,7 +246,7 @@ describe('Orders API', () => {
     it('returns 400 for invalid ID', async () => {
       currentClient = makeAdminSupabase();
       const req = new NextRequest('http://localhost/api/orders/abc');
-      const res = await getOrder(req, { params: { id: 'abc' } });
+      const res = await getOrder(req, { params: Promise.resolve({ id: 'abc' }) });
       expect(res.status).toBe(400);
     });
 
@@ -255,7 +255,7 @@ describe('Orders API', () => {
         tableData: { orders: [] },
       });
       const req = new NextRequest('http://localhost/api/orders/999');
-      const res = await getOrder(req, { params: { id: '999' } });
+      const res = await getOrder(req, { params: Promise.resolve({ id: '999' }) });
       expect(res.status).toBe(404);
     });
 
@@ -299,7 +299,7 @@ describe('Orders API', () => {
       });
 
       const req = new NextRequest('http://localhost/api/orders/1');
-      const res = await getOrder(req, { params: { id: '1' } });
+      const res = await getOrder(req, { params: Promise.resolve({ id: '1' }) });
 
       expect(res.status).toBe(200);
       const json = await res.json();
@@ -320,7 +320,7 @@ describe('Orders API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'invalid_status' }),
       });
-      const res = await postOrderStatus(req, { params: { id: '1' } });
+      const res = await postOrderStatus(req, { params: Promise.resolve({ id: '1' }) });
       expect(res.status).toBe(400);
     });
 
@@ -331,7 +331,7 @@ describe('Orders API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelled', reason: '   ' }),
       });
-      const res = await postOrderStatus(req, { params: { id: '1' } });
+      const res = await postOrderStatus(req, { params: Promise.resolve({ id: '1' }) });
       expect(res.status).toBe(400);
       const json = await res.json();
       expect(json.code).toBe('reason_required');
@@ -359,7 +359,7 @@ describe('Orders API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelled', reason: 'Pedido duplicado por cliente' }),
       });
-      const res = await postOrderStatus(req, { params: { id: '5' } });
+      const res = await postOrderStatus(req, { params: Promise.resolve({ id: '5' }) });
 
       expect(res.status).toBe(200);
       const json = await res.json();
@@ -399,7 +399,7 @@ describe('Orders API', () => {
       });
 
       const req = new NextRequest('http://localhost/api/orders/7/print');
-      const res = await getOrdersPrint(req, { params: { id: '7' } });
+      const res = await getOrdersPrint(req, { params: Promise.resolve({ id: '7' }) });
 
       expect(res.status).toBe(200);
       const html = await res.text();

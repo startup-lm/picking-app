@@ -7,7 +7,7 @@ import { fakeSupabase } from '../helpers/fake-supabase';
 let currentClient: any;
 
 vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: () => currentClient,
+  createSupabaseServerClient: async () => currentClient,
 }));
 
 import { POST as postImportProducts } from '@/app/api/import/products/route';

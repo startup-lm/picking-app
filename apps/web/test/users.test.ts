@@ -5,7 +5,7 @@ import { fakeSupabase, fakeSupabaseAdmin } from './helpers/fake-supabase';
 let currentClient = fakeSupabase();
 
 vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: () => currentClient,
+  createSupabaseServerClient: async () => currentClient,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -33,7 +33,7 @@ describe('Users API Endpoints', () => {
       body: JSON.stringify({ is_active: false }),
     });
 
-    const res = await patchUser(req, { params: { id: 'admin-self-id' } });
+    const res = await patchUser(req, { params: Promise.resolve({ id: 'admin-self-id' }) });
     expect(res.status).toBe(400);
 
     const data = await res.json();
@@ -58,7 +58,7 @@ describe('Users API Endpoints', () => {
       body: JSON.stringify({ role: 'operator' }),
     });
 
-    const res = await patchUser(req, { params: { id: 'admin-self-id' } });
+    const res = await patchUser(req, { params: Promise.resolve({ id: 'admin-self-id' }) });
     expect(res.status).toBe(400);
 
     const data = await res.json();
