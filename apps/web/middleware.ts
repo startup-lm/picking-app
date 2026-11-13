@@ -90,7 +90,7 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === '/login') {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/home';
+    redirectUrl.pathname = '/';
     redirectUrl.search = '';
     return createRedirectResponse(redirectUrl);
   }

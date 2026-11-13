@@ -8,7 +8,7 @@ import { fetchOrdersByDate, downloadOrdersCsv } from '@/lib/api/reports';
 import Modal from '@/components/ui/Modal';
 import { type EstadoFiltro, matchEstadoFiltro } from '@/utils/report';
 
-export default function GenerarReportePage() {
+export default function ReportesPage() {
   const router = useRouter();
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -97,12 +97,12 @@ export default function GenerarReportePage() {
 
       <div className="relative">
         <button
-          onClick={() => router.replace('/home')}
+          onClick={() => router.replace('/')}
           className="absolute left-0 top-0 text-sm text-muted underline hover:text-text"
         >
           Volver
         </button>
-        <h1 className="text-center text-2xl font-bold">Generar reporte</h1>
+        <h1 className="text-center text-2xl font-bold">Reportes</h1>
       </div>
 
       <form onSubmit={onSubmit} className="mt-10 space-y-6 max-w-lg mx-auto text-center">
@@ -162,7 +162,7 @@ export default function GenerarReportePage() {
               className="rounded-lg border border-border bg-bgInput px-3 py-2 text-text outline-none"
             >
               <option value="todos">Todos</option>
-              <option value="armado">Armado</option>
+              <option value="assembled">Preparado</option>
               <option value="despachado">Despachado</option>
             </select>
           </div>
