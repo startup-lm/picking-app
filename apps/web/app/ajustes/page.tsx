@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { authFetch, readError } from '@/lib/api/http';
 import { useToast } from '@/hooks/useToast';
+import { supabase } from '@/lib/supabase/client';
 
 export default function AjustesPage() {
   const { show, ToastViewport } = useToast();
@@ -14,6 +15,14 @@ export default function AjustesPage() {
   const [accentColor, setAccentColor] = useState('#F2A541');
   const [timezone, setTimezone] = useState('America/Argentina/Buenos_Aires');
   const [dispatchCheckEnabled, setDispatchCheckEnabled] = useState(true);
+
+  // Logo state
+  const [logoPath, setLogoPath] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [deletingLogo, setDeletingLogo] = useState(false);
 
   const timezones = typeof Intl !== 'undefined' && 'supportedValuesOf' in Intl
     ? Intl.supportedValuesOf('timeZone')
@@ -34,6 +43,17 @@ export default function AjustesPage() {
         setAccentColor(data.settings.accent_color ?? '#F2A541');
         setTimezone(data.settings.timezone ?? 'America/Argentina/Buenos_Aires');
         setDispatchCheckEnabled(Boolean(data.settings.dispatch_check_enabled));
+
+        if (data.settings.logo_path) {
+          setLogoPath(data.settings.logo_path);
+          const { data: urlData } = supabase.storage
+            .from('branding')
+            .getPublicUrl(data.settings.logo_path);
+          setLogoUrl(urlData?.publicUrl ?? null);
+        } else {
+          setLogoPath(null);
+          setLogoUrl(null);
+        }
       }
     } catch {
       show({ title: 'Error de conexión', description: 'No se pudieron cargar los ajustes', variant: 'error' });
@@ -45,6 +65,86 @@ export default function AjustesPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      return;
+    }
+    setSelectedFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+  };
+
+  const handleUploadLogo = async () => {
+    if (!selectedFile) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(selectedFile.type)) {
+      show({ title: 'Formato inválido', description: 'Debe ser PNG, JPEG, WebP o SVG', variant: 'error' });
+      return;
+    }
+
+    if (selectedFile.size > 1024 * 1024) {
+      show({ title: 'Archivo muy pesado', description: 'El logo no debe superar 1 MB', variant: 'error' });
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const res = await authFetch('/api/settings/logo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await readError(res);
+        show({ title: 'Error al subir logo', description: err, variant: 'error' });
+        return;
+      }
+
+      const data = await res.json();
+      setLogoPath(data.logo_path);
+      setLogoUrl(data.logo_url);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      show({ title: 'Logo actualizado', description: 'El logo se guardó correctamente', variant: 'success' });
+    } catch {
+      show({ title: 'Error de conexión', description: 'No se pudo subir el logo', variant: 'error' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleDeleteLogo = async () => {
+    setDeletingLogo(true);
+    try {
+      const res = await authFetch('/api/settings/logo', {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const err = await readError(res);
+        show({ title: 'Error al quitar logo', description: err, variant: 'error' });
+        return;
+      }
+
+      setLogoPath(null);
+      setLogoUrl(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      show({ title: 'Logo eliminado', description: 'Se quitó el logo de la aplicación', variant: 'success' });
+    } catch {
+      show({ title: 'Error de conexión', description: 'No se pudo quitar el logo', variant: 'error' });
+    } finally {
+      setDeletingLogo(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +200,8 @@ export default function AjustesPage() {
     );
   }
 
+  const displayUrl = previewUrl || logoUrl;
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <ToastViewport />
@@ -109,6 +211,66 @@ export default function AjustesPage() {
         <p className="text-sm text-muted mt-1">
           Configuración general, colores institucionales y reglas operativas.
         </p>
+      </div>
+
+      {/* Sección Logo */}
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-text">Logo Institucional</h2>
+          <p className="text-xs text-muted mt-0.5">
+            Imagen pública de marca (PNG, JPEG, WebP o SVG, máx. 1 MB). Se muestra en la barra de navegación y en la app móvil.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+          <div className="flex-shrink-0">
+            {displayUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={displayUrl}
+                alt="Vista previa del logo"
+                className="h-16 w-48 object-contain rounded-lg border border-border bg-white p-2"
+              />
+            ) : (
+              <div className="h-16 w-48 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-xs text-muted">
+                Sin logo configurado
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 flex-1">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              onChange={handleFileChange}
+              className="text-xs text-text file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-border file:text-xs file:font-semibold file:bg-bg file:text-text hover:file:opacity-90 cursor-pointer"
+            />
+
+            <div className="flex items-center gap-3">
+              {selectedFile && (
+                <button
+                  type="button"
+                  onClick={handleUploadLogo}
+                  disabled={uploadingLogo}
+                  className="rounded-lg border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  {uploadingLogo ? 'Subiendo…' : 'Subir logo'}
+                </button>
+              )}
+
+              {logoPath && (
+                <button
+                  type="button"
+                  onClick={handleDeleteLogo}
+                  disabled={deletingLogo}
+                  className="rounded-lg border border-danger bg-card px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10 disabled:opacity-60"
+                >
+                  {deletingLogo ? 'Quitando…' : 'Quitar logo'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-6">

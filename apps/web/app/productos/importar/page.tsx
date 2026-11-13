@@ -265,7 +265,7 @@ export default function ImportarProductosPage() {
 
             {/* Columnas ignoradas */}
             {previewData.ignoredColumns.length > 0 && (
-              <div className="mt-4 p-3.5 bg-amber-50 border border-accent/40 rounded-lg text-xs text-amber-900">
+              <div className="mt-4 p-3.5 bg-amber-50 border border-accent rounded-lg text-xs text-amber-900">
                 <strong>Aviso:</strong> Se encontraron columnas que no coinciden con ningún campo y serán
                 ignoradas: {previewData.ignoredColumns.join(', ')}.
               </div>

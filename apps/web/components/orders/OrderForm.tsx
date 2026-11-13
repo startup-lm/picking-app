@@ -445,7 +445,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
             }}
             onKeyDown={handleProductKeyDown}
             placeholder="Escanear código de barras o escribir SKU/descripción y presionar Enter…"
-            className="w-full rounded-lg border-2 border-primary/50 bg-bgInput px-3 py-2.5 text-sm text-text outline-none focus:border-primary"
+            className="w-full rounded-lg border-2 border-primary bg-bgInput px-3 py-2.5 text-sm text-text outline-none focus:border-primary"
           />
 
           {scanNotice && (

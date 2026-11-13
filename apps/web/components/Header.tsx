@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
-import { APP_NAME } from '@/lib/brand';
+import { useBranding } from '@/components/BrandingProvider';
 
 const HIDE_NAV_ON = ['/login', '/reset', '/update-password', '/sin-acceso'];
 
@@ -19,6 +19,7 @@ const NAV_LINKS = [
 ];
 
 export default function Header() {
+  const { appName, logoUrl } = useBranding();
   const pathname = usePathname();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -44,8 +45,19 @@ export default function Header() {
     <header className="sticky top-0 z-40 border-b border-border bg-primary backdrop-blur">
       <div className="flex h-16 w-full items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-6">
-          <Link href="/" className="font-bold text-white text-2xl tracking-tight leading-none hover:opacity-90">
-            {APP_NAME}
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90">
+            {logoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={logoUrl}
+                alt={appName}
+                className="h-10 w-auto max-w-[200px] object-contain"
+              />
+            ) : (
+              <span className="font-bold text-white text-2xl tracking-tight leading-none">
+                {appName}
+              </span>
+            )}
           </Link>
 
           {showNav && (
@@ -85,7 +97,7 @@ export default function Header() {
 
       {/* Mobile nav bar */}
       {showNav && (
-        <div className="flex md:hidden overflow-x-auto border-t border-white/10 px-3 py-2 gap-1 bg-primary/95">
+        <div className="flex md:hidden overflow-x-auto border-t border-white/10 px-3 py-2 gap-1 bg-primary">
           {NAV_LINKS.map(({ href, label, exact }) => {
             const active = isLinkActive(href, exact);
             return (

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { OrderSummary } from '@/types/api';
 import { estadoLabel } from '@/utils/report';
 import { formatDateTime } from '@/utils/date';
+import { useBranding } from '@/components/BrandingProvider';
 
 export default function PrintOrdersTable({
   orders,
@@ -12,6 +13,7 @@ export default function PrintOrdersTable({
   orders: OrderSummary[];
   onPrint: (id: number) => void;
 }) {
+  const { timezone } = useBranding();
   const has = useMemo(() => orders.length > 0, [orders.length]);
 
   return (
@@ -32,7 +34,7 @@ export default function PrintOrdersTable({
               <td className="py-2 pr-4 font-medium">{o.order_number}</td>
               <td className="py-2 pr-4">{o.customer || '-'}</td>
               <td className="py-2 pr-4">{estadoLabel(o.status)}</td>
-              <td className="py-2 pr-4">{formatDateTime(o.created_at)}</td>
+              <td className="py-2 pr-4">{formatDateTime(o.created_at, timezone)}</td>
               <td className="py-2 pr-0 text-right">
                 <button
                   onClick={() => onPrint(o.id)}

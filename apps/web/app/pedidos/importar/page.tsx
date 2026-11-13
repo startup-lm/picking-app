@@ -316,7 +316,7 @@ export default function ImportarPedidosPage() {
 
           {/* Warnings Table */}
           {previewData.result.warnings && previewData.result.warnings.length > 0 && (
-            <div className="rounded-xl border border-accent bg-accentSoft/30 p-6 shadow-sm">
+            <div className="rounded-xl border border-accent bg-accentSoft p-6 shadow-sm">
               <h3 className="font-bold text-text text-base mb-2">Avisos automáticos</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
