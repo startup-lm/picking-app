@@ -1,5 +1,5 @@
-// components/ui/ScannerModal.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// components/ui/scanner-modal.tsx
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Pressable, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ThemedText } from '@/components/themed-text';
@@ -8,13 +8,19 @@ import { Colors, type Palette } from '@/constants/theme';
 
 export type BarcodeResult = { data: string; type: string };
 
+export type ScannerLastResult = {
+  kind: 'success' | 'error';
+  text: string;
+  at: number;
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
   onScanned: (result: BarcodeResult) => void;
-  types?: readonly string[]; // formatos a habilitar (opcional)
+  types?: readonly string[];
   title?: string;
-  scanOnce?: boolean; // default: true
+  lastResult?: ScannerLastResult;
 };
 
 export default function ScannerModal({
@@ -23,37 +29,27 @@ export default function ScannerModal({
   onScanned,
   types,
   title = 'Escanear código',
-  scanOnce = true,
+  lastResult,
 }: Props) {
   const palette = Colors[useColorScheme() ?? 'light'];
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
-  // Evita rebotes (onBarcodeScanned puede disparar varias veces)
-  const lockRef = useRef(false);
-  // Anti-doble lectura por hardware en milisegundos (defensivo)
-  const lastTsRef = useRef(0);
-  const MIN_INTERVAL_MS = 200;
-
-  // Pide permiso al abrir; resetea flags al cerrar
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (visible) {
-        if (!permission?.granted && permission?.canAskAgain !== false) {
-          await requestPermission();
-        }
-      }
-      if (!visible && mounted) {
-        setScanned(false);
-        lockRef.current = false;
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    if (visible && !permission?.granted && permission?.canAskAgain !== false) {
+      void requestPermission();
+    }
   }, [visible, permission?.granted, permission?.canAskAgain, requestPermission]);
+
+  useEffect(() => {
+    if (!lastResult) return;
+    setShowBanner(true);
+    const timer = setTimeout(() => {
+      setShowBanner(false);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [lastResult]);
 
   const barcodeTypes = useMemo(
     () =>
@@ -73,31 +69,7 @@ export default function ScannerModal({
     [types]
   );
 
-  const handleBarcode = useCallback(
-    (result: { data: string; type: string }) => {
-      // Throttle defensivo
-      const now = Date.now();
-      if (now - lastTsRef.current < MIN_INTERVAL_MS) return;
-      lastTsRef.current = now;
-
-      // Si es "una vez" y ya bloqueamos, ignorar
-      if (scanOnce && (lockRef.current || scanned)) return;
-
-      // Bloqueamos de inmediato y desactivamos cámara
-      lockRef.current = true;
-      setScanned(true); // esto deja de renderizar la CameraView (ver abajo)
-
-      // Llamamos al parent
-      onScanned({ data: result.data, type: result.type });
-    },
-    [onScanned, scanOnce, scanned]
-  );
-
-  // Renderizamos la cámara **solo** si:
-  // - el modal está visible
-  // - hay permisos
-  // - no “consumimos” ya un escaneo (cuando scanned === true, se desmonta CameraView)
-  const shouldRenderCamera = visible && permission?.granted && !(scanOnce && scanned);
+  const shouldRenderCamera = visible && permission?.granted;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={false}>
@@ -107,7 +79,7 @@ export default function ScannerModal({
             style={styles.camera}
             facing="back"
             barcodeScannerSettings={{ barcodeTypes: barcodeTypes as any }}
-            onBarcodeScanned={(res) => handleBarcode({ data: res.data, type: res.type })}
+            onBarcodeScanned={(res) => onScanned({ data: res.data, type: res.type })}
           />
         ) : (
           <View style={[styles.camera, styles.center]}>
@@ -115,10 +87,7 @@ export default function ScannerModal({
               <ThemedText type="defaultSemiBold" style={{ textAlign: 'center' }}>
                 Se requiere permiso de cámara para escanear.
               </ThemedText>
-            ) : (
-              // Pequeño placeholder mientras se cierra el modal desde el parent
-              <ThemedText style={styles.processingText}>Procesando…</ThemedText>
-            )}
+            ) : null}
           </View>
         )}
 
@@ -136,6 +105,23 @@ export default function ScannerModal({
 
         {/* Marco guía */}
         <View style={styles.aimBox} pointerEvents="none" />
+
+        {/* Banda inferior con el resultado del último escaneo */}
+        {showBanner && lastResult ? (
+          <View
+            style={[
+              styles.resultBanner,
+              {
+                backgroundColor:
+                  lastResult.kind === 'success' ? palette.success : palette.danger,
+              },
+            ]}
+          >
+            <ThemedText style={[styles.resultBannerText, { color: palette.onPrimary }]}>
+              {lastResult.text}
+            </ThemedText>
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -146,7 +132,6 @@ const makeStyles = (p: Palette) =>
     container: { flex: 1, backgroundColor: '#000000' }, // fondo de cámara, no es token de tema
     camera: { flex: 1 },
     center: { alignItems: 'center', justifyContent: 'center' },
-    processingText: { color: p.onPrimary, opacity: 0.7 },
     topBar: {
       position: 'absolute',
       top: 48,
@@ -179,5 +164,21 @@ const makeStyles = (p: Palette) =>
       borderColor: p.onPrimary,
       borderRadius: 12,
       opacity: 0.6,
+    },
+    resultBanner: {
+      position: 'absolute',
+      bottom: 60,
+      left: 20,
+      right: 20,
+      paddingVertical: 18,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    resultBannerText: {
+      fontSize: 18,
+      fontWeight: '700',
+      textAlign: 'center',
     },
   });
