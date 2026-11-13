@@ -11,7 +11,7 @@ Permite gestionar la carga masiva de pedidos por CSV/Excel, el catálogo de prod
 
 ### Estructura Monorepo:
 - **`apps/web`**: Panel de control administrativo web construido con **Next.js 14 (App Router)**, **TypeScript** y **Tailwind CSS**.
-- **`apps/mobile`**: Aplicación móvil para operarios de depósito construida con **React Native (0.81)**, **Expo SDK 54**, **Expo Router (v6)**, escáner de códigos de barra (`expo-camera`), respuesta háptica (`expo-haptics`) y persistencia local (`expo-sqlite`).
+- **`apps/mobile`**: Aplicación móvil para operarios de depósito construida con **React Native (0.81)**, **Expo SDK 54**, **Expo Router (v6)**, escáner de códigos de barra (`expo-camera`), respuesta háptica (`expo-haptics`) y audio (`expo-audio`).
 - **`supabase/`**: Esquema de base de datos relacional PostgreSQL con funciones RPC transaccionales e índices de alto rendimiento para escaneo en tiempo real.
 
 ---
@@ -42,6 +42,9 @@ npm run dev:mobile
 # Compilar y validar tipos Web:
 npm run build:web
 
+# Tests Web (Vitest):
+npm run test:web
+
 # Linting Web:
 npm run lint:web
 
@@ -53,6 +56,16 @@ npm run lint
 
 # Typecheck Móvil:
 cd apps/mobile && ./node_modules/.bin/tsc --noEmit
+```
+
+### Base de datos (requieren Supabase CLI y Docker; los corre el usuario):
+```bash
+npm run db:local
+npm run db:test
+npm run db:types
+npm run db:bundle -- --seed
+npm run db:setup -- --project-ref <ref>
+npm run db:create-admin -- --email <email>
 ```
 
 ---
@@ -81,16 +94,24 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 
 ### 4.1. `apps/web` (Next.js 14 App Router)
 - **Rutas y Páginas**:
-  - `/home`: Dashboard principal y accesos directos.
-  - `/cargar-pedido`: Carga y validación masiva de archivos CSV/Excel con pedidos.
-  - `/cargar-productos`: Carga masiva de catálogo y códigos de barra.
-  - `/imprimir-pedido`: Generación e impresión de remitos de preparación.
-  - `/cancelar-pedido`: Búsqueda y anulación de pedidos en curso.
-  - `/generar-reporte`: Reportes de pedidos y exportación en CSV/Excel.
-  - `/api/*`: Endpoints protegidos del servidor que utilizan `supabaseAdmin` para operaciones transaccionales o sin RLS.
+  - `/`: Panel del día (dashboard de operaciones y accesos directos).
+  - `/pedidos`: Listado de pedidos, con subrutas:
+    - `/pedidos/nuevo`: Creación manual de pedidos.
+    - `/pedidos/importar`: Importación masiva con validación previa.
+    - `/pedidos/[id]`: Detalle del pedido, avance, auditoría e impresión de remito de preparación.
+    - `/pedidos/[id]/editar`: Edición de líneas y datos de pedidos borradores o pendientes.
+  - `/productos`: Catálogo maestro de productos y códigos de barra (+ `/productos/importar` para carga masiva).
+  - `/clientes`: Directorio de clientes y destinatarios.
+  - `/reportes`: Reportes de pedidos y exportación en CSV.
+  - `/usuarios`: Gestión e invitación de operadores y administradores.
+  - `/ajustes`: Configuración general del sistema, control de despacho y personalización de marca (branding).
+  - **Rutas públicas**: `/login`, `/reset` (recuperación de contraseña), `/update-password` (establecimiento de contraseña tras invitación o reset) y `/sin-acceso` (aviso para operarios sin permisos en web).
+  - `/api/*`: Route handlers que empiezan con `requireUser('admin')` (`lib/auth/require-user.ts`) y actúan como el usuario logueado (sesión por cookies con `@supabase/ssr`, `middleware.ts`); `supabaseAdmin` solo en `app/api/users/route.ts` (invitación).
+  - **Acceso exclusivo**: La web es solo para administradores activos.
+  - **Importación**: `lib/import/*` (CSV/XLSX con SheetJS, encabezados tolerantes) + dry run de las RPC.
 - **Estilos y UI**:
   - Tailwind CSS 3.
-  - Paleta de colores oficial:
+  - Paleta de colores oficial (`primary`, `accent` y `accentSoft` son variables CSS definidas por la marca de la instancia; valores por defecto los de la lista):
     - Fondo: `#F3F4F6` (`bg-bg`)
     - Tarjeta/Superficie: `#FFFFFF` (`bg-card`)
     - Borde: `#BDBDBD` (`border-border`)
@@ -108,10 +129,14 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 
 ### 4.2. `apps/mobile` (Expo React Native)
 - **Estructura de Navegación (Expo Router)**:
-  - `app/index.tsx`: Pantalla de bienvenida con accesos a `PEDIDOS` y `DESPACHOS`.
-  - `app/pedidos/index.tsx`: Lista de pedidos pendientes con buscador y refresco.
-  - `app/pedidos/[id].tsx`: Pantalla crítica de picking con escáner de códigos de barra, validación de bultos/unidades, ordenamiento por pasillo/ubicación y feedback auditivo/háptico.
-  - `app/despachos/index.tsx` y `app/despachos/[id].tsx`: Verificación y entrega de despachos.
+  - `app/login.tsx`: Login de operarios; guard en `app/_layout.tsx`, operario inactivo o sesión vencida vuelven al login.
+  - `app/index.tsx`: Inicio con accesos a PREPARAR / DESPACHAR y cerrar sesión.
+  - `app/pedidos/index.tsx`: Lista "Preparar" (pedidos en `pending` / `in_progress`).
+  - `app/despachos/index.tsx`: Lista "Despachar" (pedidos en `assembled`).
+  - `app/orden/[id].tsx?stage=picking|dispatch`: Detalle único de escaneo vía `api_find_line_by_code` + `api_scan`, cámara continua, entrada manual y lector Bluetooth en modo teclado, tarjeta "SIGUIENTE", confirmar vía `api_complete_*`.
+- **Feedback al Operario**:
+  - `lib/feedback.ts` (háptica con `expo-haptics` + sonido con `expo-audio`) y `hooks/use-toast.tsx` (toast de color).
+  - Sin `Alert` en el flujo de escaneo.
 - **Hardware y Capacidades Nativas**:
   - **Cámara y Escaneo**: `expo-camera` para captura de códigos de barra en tiempo real. Debe contar siempre con debounce y manejo de permisos.
   - **Respuesta Háptica**: Usar `expo-haptics` (`Haptics.notificationAsync`, `Haptics.impactAsync`) para confirmar escaneos correctos o alertar errores al operario.
@@ -119,27 +144,36 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
   - **Tema y Marca**: La marca se inicializa en build time desde `extra.branding` y se actualiza en runtime vía `api_public_branding()`. Consumir siempre `hooks/use-palette.ts` (`usePalette()`) para colores dinámicos con soporte de temas claro y oscuro de alto contraste. Para el nombre de marca usar `constants/brand.ts` (`APP_NAME`) o `useBranding()`.
 
 ### 4.3. `supabase/` (Base de Datos & Modelo de Negocio)
+- **Esquema**: Definido en `supabase/migrations/` (migraciones de Supabase CLI, en orden).
 - **Tablas Clave**:
-  - `products`: `sku`, `description`, `package_barcode` (código de barra del bulto/caja), `unit_barcode` (código de barra de la unidad individual).
-  - `orders`: `client`, `total_package`, `total_unit`, `status` (`pending` | `assembled`), `file_name`, `file_url`.
-  - `product_order`: Líneas del pedido con `location` (ubicación en depósito), `package_total`, `unit_total`, `package_scanned`, `unit_scanned`.
-  - `dispatch` y `product_dispatch`: Despacho asociado al pedido creado automáticamente vía RPC.
-- **Función RPC Transaccional**:
-  - `api_create_order_and_dispatch_with_lines`: Crea atómicamente la orden, el despacho asociado y todas sus líneas dentro de una única transacción SQL en PostgreSQL.
+  - `products`: Códigos como texto, `units_per_package`, `location`, `is_active`.
+  - `product_barcodes`: Unicidad global de códigos de barra (`package` o `unit`).
+  - `customers`: Directorio de clientes y destinatarios.
+  - `orders`: `order_number`, estados `draft → pending → in_progress → assembled → dispatched` / `cancelled`.
+  - `order_lines`: `*_scanned` para picking y `*_checked` para el control de despacho.
+  - `imports`: Registro de archivos de importación.
+  - `scan_events`: Idempotencia por `client_event_id`.
+  - `profiles`: Rol `admin` / `operator`, `is_active`.
+  - `app_settings`: Configuración general y marca.
+- **Seguridad RLS y Funciones RPC**:
+  - RLS en todas las tablas: el operador no escribe directo; todo por RPC `SECURITY DEFINER`.
+  - RPC: `api_scan`, `api_find_line_by_code`, `api_complete_picking`, `api_complete_dispatch`, `api_set_order_status`, `api_save_order`, `api_import_products`, `api_import_orders`, `api_report_orders`, `api_public_branding`.
+  - Contrato de errores: tabla en `supabase/README.md`.
 - **Concepto Central de Picking**:
   - Cada producto puede escanearse por **Bulto** (`package_barcode`) o por **Unidad** (`unit_barcode`).
-  - La interfaz y el hook de escaneo deben reconocer cuál código fue leído e incrementar el contador correspondiente (`package_scanned` o `unit_scanned`), sin permitir superar el total requerido salvo configuración explícita.
+  - La interfaz y el hook de escaneo deben reconocer cuál código fue leído; el contador lo incrementa la RPC `api_scan` de forma atómica, sin superar el total.
 
 ---
 
 ## 5. Estándares y Directrices para Agentes
 
-1. **No alterar contratos de API ni firmas RPC** sin actualizar en sincronía `apps/web`, `apps/mobile` y `supabase/schema.sql`.
+1. **No alterar contratos de API ni firmas RPC** sin actualizar en sincronía `apps/web`, `apps/mobile`, `supabase/migrations/` y `types/supabase.ts` de ambas apps (idénticos).
 2. **Preservar la separación de entornos**: No usar variables de Expo en Next.js ni variables de Next.js en Expo.
 3. **Manejo de Errores Defensivo**: En la app móvil, el operario trabaja en movimiento con guantes y mala conexión. Todo error de escaneo debe emitir toast claro y vibración de error (`Haptics.NotificationFeedbackType.Error`).
 4. **Respetar White-Labeling**: La identidad visual, logos y nombres se configuran dinámicamente mediante `apps/mobile/app.config.ts` y `instances/` (en lugar de `app.json`), con soporte de marca en runtime vía la RPC pública `api_public_branding()` y los hooks `usePalette()` en mobile y variables CSS en web (`tailwind.config.js`, `apps/web/lib/branding.ts`, `apps/mobile/constants/brand.ts`). No cablear strings de marcas propietarias fijas en componentes reutilizables.
 5. **No introducir dependencias sin justificación**: Mantener el bundle liviano y compatible con las versiones fijadas en los `package.json`.
 6. **Validación obligatoria de cambios**: al modificar `apps/web`, correr `npm run build:web` o `npm run lint:web`; al modificar `apps/mobile`, correr `./node_modules/.bin/tsc --noEmit` dentro de `apps/mobile` o `npm run lint:mobile`. Informar el resultado real.
 7. **Comandos aislados por app**: usar siempre `--prefix apps/web` o `--prefix apps/mobile` (React 18 vs React 19), nunca instalar dependencias de una app desde la raíz.
-8. **Consultar el esquema**: antes de tareas mayores que toquen datos, revisar `supabase/schema.sql`.
+8. **Consultar el esquema**: antes de tareas mayores que toquen datos, revisar `supabase/migrations/` y `supabase/README.md`.
 9. **Mobile en depósito**: priorizar alto contraste y bajo consumo de batería en `constants/theme.ts` y en las pantallas de picking.
+10. **Cambios de esquema**: Cambios de esquema = **nueva** migración con timestamp; nunca editar una migración ya aplicada. Validar los `.sql` y agregar tests pgTAP en `supabase/tests/`.
