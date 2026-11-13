@@ -1,14 +1,7 @@
-import { supabase } from '@/lib/supabase/client';
-
-export async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const { data } = await supabase.auth.getSession();
-  const headers = new Headers(init.headers || {});
-  if (data?.session?.access_token) {
-    headers.set('Authorization', `Bearer ${data.session.access_token}`);
-  }
+export async function authFetch(input: string | URL | Request, init: RequestInit = {}): Promise<Response> {
   return fetch(input, {
     ...init,
-    headers,
+    credentials: 'same-origin',
   });
 }
 

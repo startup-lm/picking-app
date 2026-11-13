@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
+import { requireUser } from '@/lib/auth/require-user';
+import { jsonError, rpcErrorResponse } from '@/lib/api/responses';
 import { parseArmadoCsv } from '@/lib/csv/armado';
 import type { ProcessOrderResponse } from '@/types/api';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  const db = getUserClient(req);
-  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+  const auth = await requireUser('admin');
+  if (!auth.ok) return auth.response;
+  const db = auth.supabase;
 
   try {
     const form = await req.formData();
     const file = form.get('file') as File | null;
     if (!file) {
       return jsonError(400, 'invalid_argument', 'Archivo CSV requerido');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return jsonError(413, 'file_too_large', 'El archivo supera el límite de 5 MB');
     }
 
     const buf = Buffer.from(await file.arrayBuffer());

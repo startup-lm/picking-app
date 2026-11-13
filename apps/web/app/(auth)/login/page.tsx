@@ -39,9 +39,9 @@ function LoginForm() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      localStorage.setItem('login_at', String(Date.now()));
       const to = search.get('redirectedFrom') || '/home';
       router.replace(to);
+      router.refresh();
     } catch (err: any) {
       openModal('Error de autenticación', err?.message ? 'Email y/o contraseña incorrecto/s' :  'No se pudo iniciar sesión.');
     } finally {

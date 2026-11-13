@@ -10,6 +10,7 @@
     "lint:web": "npm run lint --prefix apps/web",
     "lint:mobile": "npm run lint --prefix apps/mobile",
     "lint": "npm run lint:web && npm run lint:mobile",
+    "test:web": "npm test --prefix apps/web",
     "icons:placeholder": "node scripts/gen-placeholder-icons.mjs",
     "release": "node scripts/release.mjs",
     "release:patch": "node scripts/release.mjs patch",
