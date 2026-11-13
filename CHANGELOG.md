@@ -17,6 +17,9 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - Soporte multi-instancia y white-labeling: configuración dinámica de marca en web y mobile con `app.config.ts`, variables CSS, API de branding y generación de íconos.
 - Preparación para entorno de pruebas: configuración de despliegue en Netlify (`netlify.toml`), perfil de compilación `testing` en EAS, runbook de Supabase y checklist de validación operativa.
 
+### Changed
+- Actualización del panel web a Next.js 16 y React 19: `middleware` pasa a `proxy`, APIs de request asincrónicas (`cookies()`, `params`) y ESLint 9 con configuración flat.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added
