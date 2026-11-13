@@ -58,11 +58,11 @@ export async function GET(
   if (userIds.length > 0) {
     const { data: profiles } = await db
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, name, email')
       .in('id', userIds);
 
     for (const p of profiles ?? []) {
-      profilesMap.set(p.id, p.full_name || p.email || p.id);
+      profilesMap.set(p.id, p.name || p.email || p.id);
     }
   }
 

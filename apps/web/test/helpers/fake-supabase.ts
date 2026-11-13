@@ -24,7 +24,7 @@ export function fakeSupabase(options: FakeSupabaseOptions = {}) {
 
     if (table === 'profiles') {
       const defaultAdminProfile = profile
-        ? { id: user?.id ?? 'admin-1', role: 'admin', is_active: true, ...profile }
+        ? { id: user?.id ?? 'admin-1', ...profile }
         : null;
       if (options.tableData?.profiles) {
         currentData = [

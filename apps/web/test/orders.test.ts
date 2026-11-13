@@ -292,8 +292,8 @@ describe('Orders API', () => {
         tableData: {
           orders: [mockOrder],
           profiles: [
-            { id: 'user-created', full_name: 'Creador Nombre', email: 'c@test.com' },
-            { id: 'user-started', full_name: 'Preparador Nombre', email: 'p@test.com' },
+            { id: 'user-created', name: 'Creador Nombre', email: 'c@test.com' },
+            { id: 'user-started', name: 'Preparador Nombre', email: 'p@test.com' },
           ],
         },
       });
