@@ -15,6 +15,7 @@ Este directorio contiene el esquema relacional, funciones RPC transaccionales y 
 1. Crear un nuevo proyecto desde el panel de control de Supabase (seleccionar región cercana y definir una contraseña segura para la base de datos).
 2. **Autenticación (Auth)**:
    - En **Authentication → Providers → Email**: Habilitar el proveedor de correo electrónico y **desactivar "Allow new users to sign up"** (el registro público debe permanecer cerrado; los usuarios son dados de alta por el administrador).
+   - En **Authentication → Sessions**: Configurar tiempo máximo de sesión (**Timebox**) en `8 hours` y tiempo de inactividad (**Inactivity timeout**) en `30 minutes`.
    - En **Authentication → URL Configuration**: Configurar **Site URL** con la URL pública de la aplicación web de Pickflow.
 
 ### 3. Aplicación de Migraciones y Esquema con CLI
