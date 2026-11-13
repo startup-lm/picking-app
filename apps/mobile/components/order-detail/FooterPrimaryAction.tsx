@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 type Props = {
   visible: boolean;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export default function FooterPrimaryAction({ visible, label, loading, onPress }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   if (!visible) return null;

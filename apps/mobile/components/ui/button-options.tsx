@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 type Props = {
   onPress: () => void;
@@ -12,7 +11,7 @@ type Props = {
 };
 
 export default function ButtonOptions({ onPress, size = 22, color, style, accessibilityLabel = 'Abrir menú', }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const iconColor = color ?? palette.text;
   return (
     <Pressable onPress={onPress} hitSlop={10} style={[styles.btn, style]} accessibilityRole="button" accessibilityLabel={accessibilityLabel} >

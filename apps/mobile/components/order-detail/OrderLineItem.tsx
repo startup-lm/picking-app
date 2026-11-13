@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 import type { OrderDetailLine } from '@/lib/repository/orders';
 import type { Stage } from '@/types/rpc';
 import { progressOf } from '@/utils/progress';
@@ -15,7 +15,7 @@ type Props = {
 };
 
 export default function OrderLineItem({ line, stage, onLongPress }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   const progress = progressOf(line, stage);

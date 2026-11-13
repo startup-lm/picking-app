@@ -1,8 +1,8 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 type Props = {
   onSubmitCode: (code: string) => Promise<unknown> | void;
@@ -10,7 +10,7 @@ type Props = {
 };
 
 export default function CodeInput({ onSubmitCode, disabled = false }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   const [manualText, setManualText] = useState('');

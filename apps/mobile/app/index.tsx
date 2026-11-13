@@ -1,17 +1,19 @@
 import { useMemo } from 'react';
-import { Alert, StyleSheet, Pressable, View } from 'react-native';
+import { Alert, Image, StyleSheet, Pressable, View } from 'react-native';
 import { Link } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
+import { useBranding } from '@/lib/branding-context';
 import { useSession } from '@/lib/session-context';
 import { signOut } from '@/lib/session';
 
 export default function HomeScreen() {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const { profile } = useSession();
+  const { appName, logoUrl } = useBranding();
 
   const handleSignOut = () => {
     Alert.alert('Cerrar sesión', '¿Estás seguro de que querés cerrar sesión?', [
@@ -29,6 +31,18 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
+        {logoUrl ? (
+          <Image
+            source={{ uri: logoUrl }}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityLabel={appName}
+          />
+        ) : (
+          <ThemedText type="title" style={styles.brandTitle}>
+            {appName}
+          </ThemedText>
+        )}
         <ThemedText type="subtitle" style={styles.greeting}>
           Hola, {profile?.name ?? 'operario'}
         </ThemedText>
@@ -69,6 +83,16 @@ const makeStyles = (p: Palette) =>
     header: {
       paddingTop: 10,
       alignItems: 'center',
+    },
+    logo: {
+      height: 48,
+      width: 180,
+      marginBottom: 12,
+    },
+    brandTitle: {
+      color: p.text,
+      textAlign: 'center',
+      marginBottom: 8,
     },
     greeting: {
       color: p.text,

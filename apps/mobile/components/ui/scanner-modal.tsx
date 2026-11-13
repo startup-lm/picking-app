@@ -3,8 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Pressable, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 export type BarcodeResult = { data: string; type: string };
 
@@ -31,7 +31,7 @@ export default function ScannerModal({
   title = 'Escanear código',
   lastResult,
 }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const [permission, requestPermission] = useCameraPermissions();
   const [showBanner, setShowBanner] = useState(false);

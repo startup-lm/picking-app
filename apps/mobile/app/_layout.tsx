@@ -4,16 +4,17 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { Session } from '@supabase/supabase-js';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { APP_NAME } from '@/constants/brand';
+import { usePalette } from '@/hooks/use-palette';
+import { BrandingProvider, useBranding } from '@/lib/branding-context';
 import { supabase } from '@/lib/supabase/client';
 import { initFeedback } from '@/lib/feedback';
 import { fetchOwnProfile, isAuthError, signOut, type UserProfile } from '@/lib/session';
 import { SessionContext } from '@/lib/session-context';
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const scheme = useColorScheme();
-  const palette = Colors[scheme ?? 'light'];
+  const palette = usePalette();
+  const { appName } = useBranding();
   const segments = useSegments();
   const router = useRouter();
 
@@ -132,10 +133,10 @@ export default function RootLayout() {
             headerBackButtonDisplayMode: 'minimal',
           }}
         >
-          <Stack.Screen name="index" options={{ title: APP_NAME.toUpperCase() }} />
+          <Stack.Screen name="index" options={{ title: appName.toUpperCase() }} />
           <Stack.Screen
             name="login"
-            options={{ title: APP_NAME.toUpperCase(), headerBackVisible: false }}
+            options={{ title: appName.toUpperCase(), headerBackVisible: false }}
           />
           <Stack.Screen name="pedidos/index" options={{ title: 'PREPARAR' }} />
           <Stack.Screen name="despachos/index" options={{ title: 'DESPACHAR' }} />
@@ -144,5 +145,13 @@ export default function RootLayout() {
         <StatusBar style="light" />
       </ThemeProvider>
     </SessionContext.Provider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <BrandingProvider>
+      <RootLayoutNav />
+    </BrandingProvider>
   );
 }
