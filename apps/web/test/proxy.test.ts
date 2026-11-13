@@ -19,9 +19,9 @@ vi.mock('@supabase/ssr', () => ({
   }),
 }));
 
-import { middleware } from '@/middleware';
+import { proxy } from '@/proxy';
 
-describe('Auth Middleware', () => {
+describe('Auth proxy', () => {
   beforeEach(() => {
     mockUser = null;
     mockProfile = null;
@@ -33,7 +33,7 @@ describe('Auth Middleware', () => {
       mockProfile = null;
 
       const req = new NextRequest('http://localhost/pedidos');
-      const res = await middleware(req);
+      const res = await proxy(req);
 
       expect([307, 308]).toContain(res.status);
       expect(res.headers.get('location')).toBe('http://localhost/login?redirectedFrom=%2Fpedidos');
@@ -45,7 +45,7 @@ describe('Auth Middleware', () => {
       mockProfile = null;
 
       const req = new NextRequest('http://localhost/login');
-      const res = await middleware(req);
+      const res = await proxy(req);
 
       expect([307, 308]).not.toContain(res.status);
       expect(res.headers.get('cache-control')).toBe('private, no-store');
@@ -56,7 +56,7 @@ describe('Auth Middleware', () => {
       mockProfile = null;
 
       const req = new NextRequest('http://localhost/api/orders');
-      const res = await middleware(req);
+      const res = await proxy(req);
 
       expect([307, 308]).not.toContain(res.status);
       expect(res.headers.get('cache-control')).toBe('private, no-store');
@@ -69,7 +69,7 @@ describe('Auth Middleware', () => {
       mockProfile = { role: 'operator', is_active: true };
 
       const req = new NextRequest('http://localhost/pedidos');
-      const res = await middleware(req);
+      const res = await proxy(req);
 
       expect([307, 308]).toContain(res.status);
       expect(res.headers.get('location')).toBe('http://localhost/sin-acceso');
@@ -83,7 +83,7 @@ describe('Auth Middleware', () => {
       mockProfile = { role: 'admin', is_active: true };
 
       const req = new NextRequest('http://localhost/');
-      const res = await middleware(req);
+      const res = await proxy(req);
 
       expect([307, 308]).not.toContain(res.status);
       expect(res.headers.get('cache-control')).toBe('private, no-store');
@@ -94,7 +94,7 @@ describe('Auth Middleware', () => {
       mockProfile = { role: 'admin', is_active: true };
 
       const req = new NextRequest('http://localhost/login');
-      const res = await middleware(req);
+      const res = await proxy(req);
 
       expect([307, 308]).toContain(res.status);
       expect(res.headers.get('location')).toBe('http://localhost/');
