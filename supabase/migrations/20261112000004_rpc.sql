@@ -942,8 +942,9 @@ BEGIN
 
       -- Obtener atributos de cabecera a partir del grupo
       SELECT pf_blank(customer) INTO v_cust_name
-      FROM jsonb_to_recordset(v_group->'rows') AS x(customer text)
+      FROM jsonb_to_recordset(v_group->'rows') WITH ORDINALITY AS x(customer text, ord bigint)
       WHERE pf_blank(customer) IS NOT NULL
+      ORDER BY x.ord
       LIMIT 1;
 
       IF v_cust_name IS NULL THEN
@@ -952,8 +953,9 @@ BEGIN
       END IF;
 
       SELECT pf_blank(due_date) INTO v_due_date_str
-      FROM jsonb_to_recordset(v_group->'rows') AS x(due_date text)
+      FROM jsonb_to_recordset(v_group->'rows') WITH ORDINALITY AS x(due_date text, ord bigint)
       WHERE pf_blank(due_date) IS NOT NULL
+      ORDER BY x.ord
       LIMIT 1;
 
       IF v_due_date_str IS NOT NULL THEN
@@ -971,8 +973,9 @@ BEGIN
       END IF;
 
       SELECT pf_blank(priority) INTO v_priority_str
-      FROM jsonb_to_recordset(v_group->'rows') AS x(priority text)
+      FROM jsonb_to_recordset(v_group->'rows') WITH ORDINALITY AS x(priority text, ord bigint)
       WHERE pf_blank(priority) IS NOT NULL
+      ORDER BY x.ord
       LIMIT 1;
 
       IF v_priority_str IS NOT NULL THEN
@@ -985,8 +988,9 @@ BEGIN
       END IF;
 
       SELECT pf_blank(notes) INTO v_notes
-      FROM jsonb_to_recordset(v_group->'rows') AS x(notes text)
+      FROM jsonb_to_recordset(v_group->'rows') WITH ORDINALITY AS x(notes text, ord bigint)
       WHERE pf_blank(notes) IS NOT NULL
+      ORDER BY x.ord
       LIMIT 1;
 
       -- Validar líneas del pedido actual
