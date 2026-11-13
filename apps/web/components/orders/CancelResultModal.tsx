@@ -16,7 +16,7 @@ export default function CancelResultModal({ open, onClose, deletedCount, }: { op
         <div className="w-full  flex justify-center">
           <button
             onClick={onClose}
-            className="rounded-lg border border-border bg-yellow px-4 py-2 text-sm font-semibold"
+            className="rounded-lg border border-border bg-accent px-4 py-2 text-sm font-semibold text-text"
           >
             Cerrar
           </button>

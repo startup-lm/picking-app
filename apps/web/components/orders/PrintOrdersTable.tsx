@@ -45,7 +45,7 @@ export default function PrintOrdersTable({
               <td className="py-2 pr-0 text-right">
                 <button
                   onClick={() => onPrint(o.id)}
-                  className="rounded-lg border border-border bg-yellow px-3 py-1.5 text-xs font-semibold text-text hover:opacity-90"
+                  className="rounded-lg border border-border bg-accent px-3 py-1.5 text-xs font-semibold text-text hover:opacity-90"
                 >
                   Imprimir pedido
                 </button>

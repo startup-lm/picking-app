@@ -215,7 +215,7 @@ export default function CargarProductosPage() {
             type="button"
             disabled={busy || selectedCount === 0}
             onClick={onUpload}
-            className="rounded-lg border border-border bg-yellow px-6 py-2 font-bold text-text disabled:opacity-60"
+            className="rounded-lg border border-border bg-accent px-6 py-2 font-bold text-text disabled:opacity-60"
           >
             {busy ? 'Procesando…' : `Procesar ${selectedCount} archivo${selectedCount > 1 ? 's' : ''}`}
           </button>

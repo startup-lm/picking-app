@@ -69,7 +69,7 @@ export default function GenerarReportePage() {
           <div className="w-full flex justify-center">
             <button
               onClick={closeModal}
-              className="rounded-lg border border-border bg-yellow px-4 py-2 text-sm font-semibold"
+              className="rounded-lg border border-border bg-accent px-4 py-2 text-sm font-semibold text-text"
             >
               Aceptar
             </button>
@@ -117,7 +117,7 @@ export default function GenerarReportePage() {
           <button
             type="submit"
             disabled={busy}
-            className="rounded-lg border border-border bg-yellow px-6 py-2 font-bold text-text disabled:opacity-60"
+            className="rounded-lg border border-border bg-accent px-6 py-2 font-bold text-text disabled:opacity-60"
           >
             {busy ? 'Generando…' : 'Generar'}
           </button>

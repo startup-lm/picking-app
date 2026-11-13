@@ -36,7 +36,7 @@ export default function ConfirmCancelModal({
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="rounded-lg border border-border bg-red px-4 py-2 text-sm font-semibold text-text hover:opacity-90 disabled:opacity-60"
+            className="rounded-lg border border-border bg-danger px-4 py-2 text-sm font-semibold text-text hover:opacity-90 disabled:opacity-60"
           >
             {busy ? 'Cancelando…' : 'Cancelar'}
           </button>

@@ -95,7 +95,7 @@ export default function UpdatePasswordPage() {
 
         <div className="flex items-center justify-end">
           <button
-            className="inline-flex items-center justify-center rounded-lg border border-border bg-yellow px-4 py-2 font-bold text-text disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-lg border border-border bg-accent px-4 py-2 font-bold text-text disabled:opacity-60"
             type="submit"
             disabled={busy}
           >

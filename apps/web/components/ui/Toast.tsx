@@ -10,9 +10,9 @@ const styles = {
     accent: 'bg-green-500',
   },
   error: {
-    border: 'border-red-300',
-    text: 'text-red-800',
-    accent: 'bg-red-500',
+    border: 'border-danger',
+    text: 'text-danger',
+    accent: 'bg-danger',
   },
   info: {
     border: 'border-blue-300',
