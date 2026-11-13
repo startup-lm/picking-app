@@ -1,28 +1,33 @@
-import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-export async function GET(_req: NextRequest) {
-  const { data, error } = await supabaseAdmin
+export async function GET(req: NextRequest) {
+  const db = getUserClient(req);
+  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+
+  const { data, error } = await db
     .from('orders')
-    .select('id, client, created_at, dispatches!inner(status)')
-    .eq('dispatches.status', 'pending')
-    .order('created_at', { ascending: false });
+    .select('id, order_number, status, created_at, customer:customers(name)')
+    .in('status', ['draft', 'pending', 'in_progress', 'assembled'])
+    .order('created_at', { ascending: false })
+    .limit(500);
 
-  if (error) return new Response(error.message, { status: 500 });
+  if (error) {
+    return rpcErrorResponse(error);
+  }
 
-  return new Response(JSON.stringify({ orders: data ?? [] }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      // desactiva cualquier caché intermedia
-      'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-      Pragma: 'no-cache',
-      Expires: '0',
-    },
-  });
+  const orders = (data ?? []).map((o: any) => ({
+    id: o.id,
+    order_number: o.order_number,
+    status: o.status,
+    created_at: o.created_at,
+    customer: o.customer?.name ?? 'Sin cliente',
+  }));
+
+  return NextResponse.json({ orders });
 }

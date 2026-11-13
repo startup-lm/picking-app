@@ -1,91 +1,106 @@
-import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
-import { parseArmadoCsv, buildLocation } from '@/lib/csv/armado';
-import { getProductsMapBySku } from '@/lib/repository/products';
-import { updateOrderFile } from '@/lib/repository/orders';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
+import { parseArmadoCsv } from '@/lib/csv/armado';
+import type { ProcessOrderResponse } from '@/types/api';
+
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  let orderId: number | null = null;
+  const db = getUserClient(req);
+  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
 
   try {
     const form = await req.formData();
     const file = form.get('file') as File | null;
-    if (!file) return new Response('Archivo CSV requerido', { status: 400 });
+    if (!file) {
+      return jsonError(400, 'invalid_argument', 'Archivo CSV requerido');
+    }
 
     const buf = Buffer.from(await file.arrayBuffer());
-
-    // 1) Parseo CSV
     const parsed = parseArmadoCsv(buf);
-    if (!parsed.headers_ok)        return new Response('CSV vacío o inválido (encabezados)', { status: 400 });
-    if (!parsed.client?.trim())    return new Response('Cliente (A1) requerido', { status: 400 });
-    if (parsed.items.length === 0) return new Response('Sin ítems válidos (Bultos/Uni sueltas <= 0)', { status: 400 });
-    if (parsed.duplicates.length > 0)
-      return new Response(`Artículos duplicados en CSV: ${parsed.duplicates.join(', ')}`, { status: 400 });
 
-    // 2) Validar productos por SKU
-    const skus = parsed.items.map(it => it.sku.trim());
-    const map = await getProductsMapBySku(skus);
-    const missing = Array.from(new Set(skus.filter(s => !map.has(s))));
-    if (missing.length > 0)
-      return new Response(`Artículos inexistentes: ${missing.join(', ')}`, { status: 400 });
-
-    // 3) Preparar líneas para RPC
-    const lines = parsed.items.map(it => ({
-      product_id: map.get(it.sku.trim())!,
-      location: buildLocation(it),
-      package_total: it.bultos || 0,
-      unit_total: it.uniSueltas || 0,
-    }));
-
-    // 4) RPC: crea order + product_order + dispatch + product_dispatch
-    const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
-      'api_create_order_and_dispatch_with_lines',
-      { p_client: parsed.client.trim(), p_lines: lines }
-    );
-    if (rpcError) return new Response(`Error al crear pedido+dispatch: ${rpcError.message}`, { status: 500 });
-
-    orderId = Number((rpcData as any)?.order_id);
-
-    // 5) Subir CSV al bucket
-    const cleaned = file.name.replace(/\s+/g, '_');
-    const path = `orders/${orderId}/${Date.now()}_${cleaned}`;
-
-    const { error: upErr } = await supabaseAdmin.storage
-      .from('orders')
-      .upload(path, buf, { contentType: file.type || 'text/csv', upsert: false });
-
-    if (upErr) {
-      // rollback: borro la order → CASCADE limpia product_order/dispatch/product_dispatch
-      await supabaseAdmin.from('orders').delete().eq('id', orderId);
-      return new Response(`Error al subir archivo: ${upErr.message}`, { status: 500 });
+    if (!parsed.headers_ok) {
+      return jsonError(400, 'invalid_argument', 'CSV vacío o inválido (encabezados)');
+    }
+    if (!parsed.client?.trim()) {
+      return jsonError(400, 'invalid_argument', 'Cliente (A1) requerido');
+    }
+    if (parsed.items.length === 0) {
+      return jsonError(400, 'invalid_argument', 'Sin ítems válidos (Bultos/Uni sueltas <= 0)');
+    }
+    if (parsed.duplicates.length > 0) {
+      return jsonError(400, 'invalid_argument', `Artículos duplicados en CSV: ${parsed.duplicates.join(', ')}`);
     }
 
-    // 6) Public URL y update de la order
-    const { data: pub } = supabaseAdmin.storage.from('orders').getPublicUrl(path);
-    const publicUrl = pub?.publicUrl ?? '';
-    await updateOrderFile(orderId, file.name, publicUrl);
+    const skus = Array.from(new Set(parsed.items.map(it => it.sku.trim())));
+    const { data: dbProducts, error: prodErr } = await db
+      .from('products')
+      .select('id, sku, is_active')
+      .in('sku', skus);
 
-    // 7) Respuesta
-    return new Response(
-      JSON.stringify({
-        client: parsed.client.trim(),
-        order_id: orderId,
-        dispatch_id: Number((rpcData as any)?.dispatch_id),
-        totals: {
-          total_package: Number((rpcData as any)?.total_package),
-          total_unit: Number((rpcData as any)?.total_unit),
-        },
-        file_url: publicUrl,
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    if (prodErr) {
+      return rpcErrorResponse(prodErr);
+    }
 
+    const prodMap = new Map<string, { id: number; is_active: boolean }>();
+    (dbProducts ?? []).forEach(p => {
+      prodMap.set(p.sku.trim(), { id: p.id, is_active: p.is_active });
+    });
+
+    const missing: string[] = [];
+    const inactive: string[] = [];
+
+    for (const s of skus) {
+      const p = prodMap.get(s);
+      if (!p) {
+        missing.push(s);
+      } else if (!p.is_active) {
+        inactive.push(s);
+      }
+    }
+
+    if (missing.length > 0 || inactive.length > 0) {
+      const parts: string[] = [];
+      if (missing.length > 0) parts.push(`inexistentes: ${missing.join(', ')}`);
+      if (inactive.length > 0) parts.push(`inactivos: ${inactive.join(', ')}`);
+      return jsonError(400, 'invalid_order', `Artículos ${parts.join('; ')}`);
+    }
+
+    const lines = parsed.items.map(it => {
+      const p = prodMap.get(it.sku.trim())!;
+      return {
+        product_id: p.id,
+        package_total: it.bultos || 0,
+        unit_total: it.uniSueltas || 0,
+      };
+    });
+
+    const { data: rpcData, error: rpcErr } = await db.rpc('api_save_order', {
+      p_order: {
+        customer_name: parsed.client.trim(),
+        release: true,
+        lines,
+      },
+    });
+
+    if (rpcErr) {
+      return rpcErrorResponse(rpcErr);
+    }
+
+    const saved = rpcData as { order_id: number; order_number: string; status: string };
+
+    const response: ProcessOrderResponse = {
+      order_id: saved.order_id,
+      order_number: saved.order_number,
+      customer: parsed.client.trim(),
+      totals: {
+        total_package: parsed.total_package,
+        total_unit: parsed.total_unit,
+      },
+    };
+
+    return NextResponse.json(response);
   } catch (err: any) {
-    if (orderId) {
-      // limpieza defensiva si algo explotó luego de crear
-      await supabaseAdmin.from('orders').delete().eq('id', orderId);
-    }
-    return new Response(`Error inesperado: ${err?.message || err}`, { status: 500 });
+    return jsonError(500, 'internal', err?.message || 'Error inesperado al procesar el pedido');
   }
 }
