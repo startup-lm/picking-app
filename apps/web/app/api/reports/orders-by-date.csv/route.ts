@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
       'Nro Pedido',
       'Cliente',
       'Estado',
-      'Armado',
-      'Armado por',
+      'Preparado',
+      'Preparado por',
       'Cod Producto',
       'Descripcion',
       'Ubicacion',
@@ -68,16 +68,16 @@ export async function GET(req: NextRequest) {
       const nroPedido = o.order_number;
       const cliente = o.customer;
       const estado = estadoLabel(o.status);
-      const armado = o.assembled_at ? formatDateTime(o.assembled_at) : '';
-      const armadoPor = o.assembled_by_name ?? '';
+      const assembledDate = o.assembled_at ? formatDateTime(o.assembled_at) : '';
+      const assembledPor = o.assembled_by_name ?? '';
 
       const base = [
         csvEsc(fecha),
         csvEsc(nroPedido),
         csvEsc(cliente),
         csvEsc(estado),
-        csvEsc(armado),
-        csvEsc(armadoPor),
+        csvEsc(assembledDate),
+        csvEsc(assembledPor),
       ];
 
       const lines = Array.isArray(o.lines) ? o.lines : [];

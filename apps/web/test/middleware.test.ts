@@ -28,15 +28,15 @@ describe('Auth Middleware', () => {
   });
 
   describe('Unauthenticated user (sin sesión)', () => {
-    it('redirects GET /home to /login?redirectedFrom=%2Fhome', async () => {
+    it('redirects GET /pedidos to /login?redirectedFrom=%2Fpedidos', async () => {
       mockUser = null;
       mockProfile = null;
 
-      const req = new NextRequest('http://localhost/home');
+      const req = new NextRequest('http://localhost/pedidos');
       const res = await middleware(req);
 
       expect([307, 308]).toContain(res.status);
-      expect(res.headers.get('location')).toBe('http://localhost/login?redirectedFrom=%2Fhome');
+      expect(res.headers.get('location')).toBe('http://localhost/login?redirectedFrom=%2Fpedidos');
       expect(res.headers.get('cache-control')).toBe('private, no-store');
     });
 
@@ -51,11 +51,11 @@ describe('Auth Middleware', () => {
       expect(res.headers.get('cache-control')).toBe('private, no-store');
     });
 
-    it('does not redirect GET /api/orders/all', async () => {
+    it('does not redirect GET /api/orders', async () => {
       mockUser = null;
       mockProfile = null;
 
-      const req = new NextRequest('http://localhost/api/orders/all');
+      const req = new NextRequest('http://localhost/api/orders');
       const res = await middleware(req);
 
       expect([307, 308]).not.toContain(res.status);
@@ -64,11 +64,11 @@ describe('Auth Middleware', () => {
   });
 
   describe('Active Operator (operador activo)', () => {
-    it('redirects GET /home to /sin-acceso', async () => {
+    it('redirects GET /pedidos to /sin-acceso', async () => {
       mockUser = { id: 'op-1', email: 'op@example.com' };
       mockProfile = { role: 'operator', is_active: true };
 
-      const req = new NextRequest('http://localhost/home');
+      const req = new NextRequest('http://localhost/pedidos');
       const res = await middleware(req);
 
       expect([307, 308]).toContain(res.status);
@@ -78,18 +78,18 @@ describe('Auth Middleware', () => {
   });
 
   describe('Active Admin (admin activo)', () => {
-    it('does not redirect GET /home', async () => {
+    it('does not redirect GET /', async () => {
       mockUser = { id: 'admin-1', email: 'admin@example.com' };
       mockProfile = { role: 'admin', is_active: true };
 
-      const req = new NextRequest('http://localhost/home');
+      const req = new NextRequest('http://localhost/');
       const res = await middleware(req);
 
       expect([307, 308]).not.toContain(res.status);
       expect(res.headers.get('cache-control')).toBe('private, no-store');
     });
 
-    it('redirects GET /login to /home', async () => {
+    it('redirects GET /login to /', async () => {
       mockUser = { id: 'admin-1', email: 'admin@example.com' };
       mockProfile = { role: 'admin', is_active: true };
 
@@ -97,7 +97,7 @@ describe('Auth Middleware', () => {
       const res = await middleware(req);
 
       expect([307, 308]).toContain(res.status);
-      expect(res.headers.get('location')).toBe('http://localhost/home');
+      expect(res.headers.get('location')).toBe('http://localhost/');
       expect(res.headers.get('cache-control')).toBe('private, no-store');
     });
   });

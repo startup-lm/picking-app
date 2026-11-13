@@ -34,6 +34,8 @@ function buildOrderHTML(
     sueltas: number;
     location: string;
   }>,
+  dueDate?: string | null,
+  notes?: string | null,
   padRowsTo = 15
 ) {
   const filled =
@@ -79,6 +81,7 @@ function buildOrderHTML(
   body { margin:0; font-family: Arial, Helvetica, sans-serif; }
   .sheet { border: 1px solid #000; padding: 4mm; display: flex; flex-direction: column; gap: 3mm; }
   .title { text-align: center; font-weight: 700; font-size: 14px; padding: 3px 4px; border: 1px solid #000; letter-spacing: .5px; }
+  .meta { font-size: 11px; padding: 2px 4px; border: 1px solid #000; display: flex; gap: 16px; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
@@ -99,6 +102,11 @@ function buildOrderHTML(
 <body>
   <div class="sheet">
     <div class="title">${escapeHtml(customer)} - ${escapeHtml(orderNumber)}</div>
+    ${dueDate || notes ? `
+    <div class="meta">
+      ${dueDate ? `<span><strong>Entrega:</strong> ${escapeHtml(dueDate)}</span>` : ''}
+      ${notes ? `<span><strong>Notas:</strong> ${escapeHtml(notes)}</span>` : ''}
+    </div>` : ''}
 
     <table>
       <thead>
@@ -144,7 +152,7 @@ export async function GET(
   const { data: order, error } = await db
     .from('orders')
     .select(
-      'id, order_number, total_package, total_unit, customer:customers(name), lines:order_lines(location, package_total, unit_total, product:products(sku, description))'
+      'id, order_number, total_package, total_unit, due_date, notes, customer:customers(name), lines:order_lines(location, package_total, unit_total, product:products(sku, description))'
     )
     .eq('id', id)
     .maybeSingle();
@@ -160,7 +168,7 @@ export async function GET(
     const locB = b.location?.trim() || '';
     if (!locA && locB) return 1;
     if (locA && !locB) return -1;
-    if (locA !== locB) return locA.localeCompare(locB);
+    if (locA !== locB) return locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
     const skuA = a.product?.sku?.trim() || '';
     const skuB = b.product?.sku?.trim() || '';
     return skuA.localeCompare(skuB);
@@ -182,6 +190,8 @@ export async function GET(
     order.total_package ?? 0,
     order.total_unit ?? 0,
     items,
+    order.due_date,
+    order.notes,
     15
   );
 

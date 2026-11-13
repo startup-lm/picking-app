@@ -1,0 +1,7 @@
+Nº Pedido	Cliente	Artículo	Bultos	Unidades	Cantidad	Fecha	Prioridad	Obs	Vendedor
+PED-001	Cliente Uno	PF-100	2	5		1/12/2026	Urgente	Nota 1	Vendedor A
+PED-001	Cliente Uno	PF-101	1	0		1/12/2026	normal		Vendedor A
+PED-002	Cliente Dos	PF-100			29	1/12/2026	Urgente	Nota 2	Vendedor B
+PED-002	Cliente Dos	PF-102	3	2		1/12/2026	normal		Vendedor B
+PED-003	Cliente Tres	PF-101	0	10		1/12/2026	Urgente		Vendedor C
+PED-003	Cliente Tres	PF-102	5	0		1/12/2026	normal	Nota 3	Vendedor C

@@ -13,17 +13,25 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 
 // Import all route handlers
-import { GET as getOrdersAll } from '@/app/api/orders/all/route';
-import { GET as getOrdersPending } from '@/app/api/orders/pending/route';
+import { GET as getOrders, POST as postOrders } from '@/app/api/orders/route';
+import { GET as getOrder } from '@/app/api/orders/[id]/route';
+import { POST as postOrderStatus } from '@/app/api/orders/[id]/status/route';
 import { POST as postOrdersCancel } from '@/app/api/orders/cancel/route';
 import { GET as getOrdersPrint } from '@/app/api/orders/[id]/print/route';
-import { POST as postOrdersProcessCsv } from '@/app/api/orders/process-csv/route';
-import { POST as postProductsProcessCsv } from '@/app/api/products/process-csv/route';
+import { GET as getDashboard } from '@/app/api/dashboard/route';
 import { GET as getReportsOrdersByDate } from '@/app/api/reports/orders-by-date/route';
 import { GET as getReportsOrdersByDateCsv } from '@/app/api/reports/orders-by-date.csv/route';
 import { GET as getUsers, POST as postUsers } from '@/app/api/users/route';
 import { PATCH as patchUser } from '@/app/api/users/[id]/route';
 import { GET as getSettings, PATCH as patchSettings } from '@/app/api/settings/route';
+import { GET as getImportTemplate } from '@/app/api/import/template/route';
+import { POST as postImportProducts } from '@/app/api/import/products/route';
+import { POST as postImportOrders } from '@/app/api/import/orders/route';
+import { GET as getProducts, POST as postProducts } from '@/app/api/products/route';
+import { GET as getProductsLookup } from '@/app/api/products/lookup/route';
+import { PATCH as patchProduct } from '@/app/api/products/[id]/route';
+import { GET as getCustomers, POST as postCustomers } from '@/app/api/customers/route';
+import { PATCH as patchCustomer } from '@/app/api/customers/[id]/route';
 
 type RouteCase = {
   name: string;
@@ -35,16 +43,28 @@ type RouteCase = {
 
 const routes: RouteCase[] = [
   {
-    name: 'GET /api/orders/all',
-    handler: getOrdersAll,
+    name: 'GET /api/orders',
+    handler: getOrders,
     method: 'GET',
-    url: 'http://localhost/api/orders/all',
+    url: 'http://localhost/api/orders',
   },
   {
-    name: 'GET /api/orders/pending',
-    handler: getOrdersPending,
+    name: 'POST /api/orders',
+    handler: postOrders,
+    method: 'POST',
+    url: 'http://localhost/api/orders',
+  },
+  {
+    name: 'GET /api/orders/[id]',
+    handler: (req) => getOrder(req, { params: { id: '1' } }),
     method: 'GET',
-    url: 'http://localhost/api/orders/pending',
+    url: 'http://localhost/api/orders/1',
+  },
+  {
+    name: 'POST /api/orders/[id]/status',
+    handler: (req) => postOrderStatus(req, { params: { id: '1' } }),
+    method: 'POST',
+    url: 'http://localhost/api/orders/1/status',
   },
   {
     name: 'POST /api/orders/cancel',
@@ -59,16 +79,10 @@ const routes: RouteCase[] = [
     url: 'http://localhost/api/orders/1/print',
   },
   {
-    name: 'POST /api/orders/process-csv',
-    handler: postOrdersProcessCsv,
-    method: 'POST',
-    url: 'http://localhost/api/orders/process-csv',
-  },
-  {
-    name: 'POST /api/products/process-csv',
-    handler: postProductsProcessCsv,
-    method: 'POST',
-    url: 'http://localhost/api/products/process-csv',
+    name: 'GET /api/dashboard',
+    handler: getDashboard,
+    method: 'GET',
+    url: 'http://localhost/api/dashboard',
   },
   {
     name: 'GET /api/reports/orders-by-date',
@@ -111,6 +125,66 @@ const routes: RouteCase[] = [
     handler: patchSettings,
     method: 'PATCH',
     url: 'http://localhost/api/settings',
+  },
+  {
+    name: 'GET /api/import/template',
+    handler: getImportTemplate,
+    method: 'GET',
+    url: 'http://localhost/api/import/template?kind=products&format=csv',
+  },
+  {
+    name: 'POST /api/import/products',
+    handler: postImportProducts,
+    method: 'POST',
+    url: 'http://localhost/api/import/products?dry_run=1',
+  },
+  {
+    name: 'POST /api/import/orders',
+    handler: postImportOrders,
+    method: 'POST',
+    url: 'http://localhost/api/import/orders?dry_run=1',
+  },
+  {
+    name: 'GET /api/products',
+    handler: getProducts,
+    method: 'GET',
+    url: 'http://localhost/api/products',
+  },
+  {
+    name: 'POST /api/products',
+    handler: postProducts,
+    method: 'POST',
+    url: 'http://localhost/api/products',
+  },
+  {
+    name: 'GET /api/products/lookup',
+    handler: getProductsLookup,
+    method: 'GET',
+    url: 'http://localhost/api/products/lookup?code=PF-1',
+  },
+  {
+    name: 'PATCH /api/products/[id]',
+    handler: (req) => patchProduct(req, { params: { id: '1' } }),
+    method: 'PATCH',
+    url: 'http://localhost/api/products/1',
+  },
+  {
+    name: 'GET /api/customers',
+    handler: getCustomers,
+    method: 'GET',
+    url: 'http://localhost/api/customers',
+  },
+  {
+    name: 'POST /api/customers',
+    handler: postCustomers,
+    method: 'POST',
+    url: 'http://localhost/api/customers',
+  },
+  {
+    name: 'PATCH /api/customers/[id]',
+    handler: (req) => patchCustomer(req, { params: { id: '1' } }),
+    method: 'PATCH',
+    url: 'http://localhost/api/customers/1',
   },
 ];
 

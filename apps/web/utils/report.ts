@@ -1,6 +1,6 @@
 import type { OrderStatus } from '@/types/rpc';
 
-export type EstadoFiltro = 'todos' | 'armado' | 'despachado';
+export type EstadoFiltro = 'todos' | 'assembled' | 'despachado';
 
 export function estadoLabel(status: OrderStatus | string | null | undefined): string {
   switch (status) {
@@ -11,7 +11,7 @@ export function estadoLabel(status: OrderStatus | string | null | undefined): st
     case 'in_progress':
       return 'En preparación';
     case 'assembled':
-      return 'Armado';
+      return 'Preparado';
     case 'dispatched':
       return 'Despachado';
     case 'cancelled':
@@ -29,7 +29,7 @@ export function matchEstadoFiltro(
   const status = typeof target === 'object' && target !== null && 'status' in target
     ? target.status
     : target;
-  if (filtro === 'armado') return status === 'assembled';
+  if (filtro === 'assembled') return status === 'assembled';
   if (filtro === 'despachado') return status === 'dispatched';
   return true;
 }

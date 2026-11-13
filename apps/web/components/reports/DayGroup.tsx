@@ -17,8 +17,8 @@ export default function DayGroupView({ group }: { group: ReportDay }) {
       <div className="space-y-6">
         {orders.map((o) => {
           const estado = estadoLabel(o.status);
-          const armadoInfo = o.assembled_at
-            ? `Armado: ${formatDateTime(o.assembled_at)}${o.assembled_by_name ? ` por ${o.assembled_by_name}` : ''}`
+          const preparadoInfo = o.assembled_at
+            ? `Preparado: ${formatDateTime(o.assembled_at)}${o.assembled_by_name ? ` por ${o.assembled_by_name}` : ''}`
             : '';
           const despachoInfo = o.dispatched_at
             ? ` · Despachado: ${formatDateTime(o.dispatched_at)}`
@@ -33,9 +33,9 @@ export default function DayGroupView({ group }: { group: ReportDay }) {
                 <div className="text-muted">
                   Bultos totales: {o.total_package} — Unidades totales: {o.total_unit}
                 </div>
-                {(armadoInfo || despachoInfo) && (
+                {(preparadoInfo || despachoInfo) && (
                   <div className="text-xs text-muted">
-                    {armadoInfo}
+                    {preparadoInfo}
                     {despachoInfo}
                   </div>
                 )}
