@@ -27,6 +27,13 @@ export function fakeSupabase(options: FakeSupabaseOptions = {}) {
         timezone: 'America/Argentina/Buenos_Aires',
         dispatch_check_enabled: true,
       };
+    } else if (table === 'imports') {
+      currentData = {
+        id: 42,
+        kind: 'orders',
+        file_name: 'orders-multi.csv',
+        summary: {},
+      };
     }
 
     const builder: any = {
@@ -59,6 +66,11 @@ export function fakeSupabase(options: FakeSupabaseOptions = {}) {
     },
     from: vi.fn((table: string) => createQueryBuilder(table)),
     rpc: vi.fn(async () => ({ data: null, error: null })),
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn(async () => ({ data: { path: 'dummy' }, error: null })),
+      })),
+    },
   };
 }
 

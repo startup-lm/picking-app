@@ -24,6 +24,9 @@ import { GET as getReportsOrdersByDateCsv } from '@/app/api/reports/orders-by-da
 import { GET as getUsers, POST as postUsers } from '@/app/api/users/route';
 import { PATCH as patchUser } from '@/app/api/users/[id]/route';
 import { GET as getSettings, PATCH as patchSettings } from '@/app/api/settings/route';
+import { GET as getImportTemplate } from '@/app/api/import/template/route';
+import { POST as postImportProducts } from '@/app/api/import/products/route';
+import { POST as postImportOrders } from '@/app/api/import/orders/route';
 
 type RouteCase = {
   name: string;
@@ -111,6 +114,24 @@ const routes: RouteCase[] = [
     handler: patchSettings,
     method: 'PATCH',
     url: 'http://localhost/api/settings',
+  },
+  {
+    name: 'GET /api/import/template',
+    handler: getImportTemplate,
+    method: 'GET',
+    url: 'http://localhost/api/import/template?kind=products&format=csv',
+  },
+  {
+    name: 'POST /api/import/products',
+    handler: postImportProducts,
+    method: 'POST',
+    url: 'http://localhost/api/import/products?dry_run=1',
+  },
+  {
+    name: 'POST /api/import/orders',
+    handler: postImportOrders,
+    method: 'POST',
+    url: 'http://localhost/api/import/orders?dry_run=1',
   },
 ];
 
