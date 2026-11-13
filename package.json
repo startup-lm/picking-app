@@ -1,11 +1,8 @@
 {
-  "name": "picking-app-workspace",
-  "version": "1.0.9",
+  "name": "pickflow",
+  "version": "0.1.0",
   "private": true,
-  "description": "Smart Warehouse Picking & Inventory Suite (Web + Mobile)",
-  "workspaces": [
-    "apps/*"
-  ],
+  "description": "Pickflow — preparación y despacho de pedidos para depósitos (web + Android)",
   "scripts": {
     "dev:web": "npm run dev --prefix apps/web",
     "dev:mobile": "npm run start --prefix apps/mobile",
@@ -13,6 +10,7 @@
     "lint:web": "npm run lint --prefix apps/web",
     "lint:mobile": "npm run lint --prefix apps/mobile",
     "lint": "npm run lint:web && npm run lint:mobile",
+    "icons:placeholder": "node scripts/gen-placeholder-icons.mjs",
     "release": "node scripts/release.mjs",
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",
@@ -26,5 +24,5 @@
     "saas"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "UNLICENSED"
 }
