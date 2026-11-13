@@ -1,14 +1,18 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": [ "dom", "dom.iterable", "esnext" ],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "strict": true,
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "noEmit": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "allowJs": true,
     "incremental": true,
@@ -20,15 +24,20 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "tailwind.config.js", "postcss.config.js"  ],
+    ".next/types/**/*.ts",
+    "tailwind.config.js",
+    "postcss.config.js",
+    ".next/dev/types/**/*.ts"
+  ],
   "exclude": [
     "node_modules"
   ]
