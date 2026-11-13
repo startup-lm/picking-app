@@ -75,6 +75,7 @@ export function parseProductsCsv(buffer: Buffer): ProductCsvParse {
     seen.add(sku);
 
     items.push({
+      row: i + 1,
       sku,
       description,
       packageCode,
