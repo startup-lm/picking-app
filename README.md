@@ -105,6 +105,17 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 
 ---
 
+## Despliegue
+
+La puesta en marcha y despliegue de Pickflow comprende la infraestructura en Supabase, el panel web en Netlify y la aplicación móvil en Expo Application Services (EAS):
+
+- **Guía de Despliegue y Runbook de Supabase**: [supabase/README.md](supabase/README.md) detalla la inicialización de bases de datos, migraciones, seed y el paso a paso para la instancia de pruebas `pickflow-testing`.
+- **Configuración Web en Netlify**: [netlify.toml](netlify.toml) contiene los parámetros de construcción automatizada para el panel Next.js 14.
+- **Configuración de Instancias y Compilación Móvil**: [instances/README.md](instances/README.md) explica el armado de variantes white-label y compilación mediante EAS Build.
+- **Checklist de Validación Operativa**: [docs/pickflow-testing-checklist.md](docs/pickflow-testing-checklist.md) proporciona la lista integral de verificación funcional antes del pase a producción.
+
+---
+
 ## Estado Actual
 
 ### Funcionalidades implementadas (hoy operativas):
