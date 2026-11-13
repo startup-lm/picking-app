@@ -115,7 +115,8 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 - **Hardware y Capacidades Nativas**:
   - **Cámara y Escaneo**: `expo-camera` para captura de códigos de barra en tiempo real. Debe contar siempre con debounce y manejo de permisos.
   - **Respuesta Háptica**: Usar `expo-haptics` (`Haptics.notificationAsync`, `Haptics.impactAsync`) para confirmar escaneos correctos o alertar errores al operario.
-  - **Tema y Constantes**: Consumir siempre `constants/theme.ts` para colores y fuentes (`Colors.light`, `Colors.dark`), con soporte de temas claro y oscuro de alto contraste. Para el nombre de marca usar `constants/brand.ts` (`APP_NAME`).
+  - **Configuración e Instancias**: Configuración dinámica mediante `app.config.ts` y carpetas `instances/<nombre>/` (en reemplazo de `app.json`). Si `PICKFLOW_INSTANCE` no está definida, compila la versión base de Pickflow.
+  - **Tema y Marca**: La marca se inicializa en build time desde `extra.branding` y se actualiza en runtime vía `api_public_branding()`. Consumir siempre `hooks/use-palette.ts` (`usePalette()`) para colores dinámicos con soporte de temas claro y oscuro de alto contraste. Para el nombre de marca usar `constants/brand.ts` (`APP_NAME`) o `useBranding()`.
 
 ### 4.3. `supabase/` (Base de Datos & Modelo de Negocio)
 - **Tablas Clave**:
@@ -136,7 +137,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 1. **No alterar contratos de API ni firmas RPC** sin actualizar en sincronía `apps/web`, `apps/mobile` y `supabase/schema.sql`.
 2. **Preservar la separación de entornos**: No usar variables de Expo en Next.js ni variables de Next.js en Expo.
 3. **Manejo de Errores Defensivo**: En la app móvil, el operario trabaja en movimiento con guantes y mala conexión. Todo error de escaneo debe emitir toast claro y vibración de error (`Haptics.NotificationFeedbackType.Error`).
-4. **Respetar White-Labeling**: La identidad visual, logos y nombres están centralizados en `apps/mobile/app.json`, `apps/mobile/constants/theme.ts`, `apps/web/tailwind.config.js`, `apps/web/lib/brand.ts` y `apps/mobile/constants/brand.ts`. No cablear strings de marcas propietarias fijas en componentes reutilizables.
+4. **Respetar White-Labeling**: La identidad visual, logos y nombres se configuran dinámicamente mediante `apps/mobile/app.config.ts` y `instances/` (en lugar de `app.json`), con soporte de marca en runtime vía la RPC pública `api_public_branding()` y los hooks `usePalette()` en mobile y variables CSS en web (`tailwind.config.js`, `apps/web/lib/branding.ts`, `apps/mobile/constants/brand.ts`). No cablear strings de marcas propietarias fijas en componentes reutilizables.
 5. **No introducir dependencias sin justificación**: Mantener el bundle liviano y compatible con las versiones fijadas en los `package.json`.
 6. **Validación obligatoria de cambios**: al modificar `apps/web`, correr `npm run build:web` o `npm run lint:web`; al modificar `apps/mobile`, correr `./node_modules/.bin/tsc --noEmit` dentro de `apps/mobile` o `npm run lint:mobile`. Informar el resultado real.
 7. **Comandos aislados por app**: usar siempre `--prefix apps/web` o `--prefix apps/mobile` (React 18 vs React 19), nunca instalar dependencias de una app desde la raíz.

@@ -64,8 +64,22 @@ cd apps/mobile && ./node_modules/.bin/tsc --noEmit
 ### Generación de Íconos Placeholder
 
 ```bash
+# Íconos por defecto de Pickflow:
 npm run icons:placeholder
+
+# Íconos para una instancia personalizada:
+npm run icons:instance -- --out instances/<nombre-instancia> --primary "#0F4C5C" --accent "#F2A541"
 ```
+
+---
+
+## Instancias (White-Labeling)
+
+Pickflow soporta configuración multi-instancia para personalizar el nombre, bundle ID, íconos y colores de la aplicación móvil a partir de la misma base de código.
+Cada cliente o depósito se define en una carpeta dentro de `instances/<nombre>/` con su propio `instance.json` y assets de ícono/splash.
+
+Para más detalles sobre la creación de instancias, variables de entorno y compilación con EAS:
+👉 Consultar la guía completa en [instances/README.md](instances/README.md).
 
 ---
 
