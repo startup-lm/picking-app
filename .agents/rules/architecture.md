@@ -7,7 +7,7 @@ pickflow/
 ├── apps/
 │   ├── web/        # Panel de control administrativo (Next.js 14)
 │   └── mobile/     # Aplicación de operario en depósito (Expo 54)
-├── supabase/       # Esquemas SQL, migraciones y funciones RPC
+├── supabase/       # Migraciones SQL cronológicas, funciones RPC y tests pgTAP
 ├── .agents/        # Reglas modulares para agentes de IA
 │   └── rules/
 ├── AGENTS.md       # Documento maestro para agentes
@@ -15,27 +15,28 @@ pickflow/
 └── CLAUDE.md       # Guía rápida para Claude Code
 ```
 
-## 2. Flujo de Datos Operativo de Picking
+## 2. Flujo de Datos Operativo de Picking y Despacho
 ```
 [Administrador Web]
        │
-       ▼ (Sube archivo CSV con pedidos)
-[/api/orders/process-csv]
+       ▼ (Carga pedidos por CSV/XLSX en /pedidos/importar o manual en /pedidos/nuevo)
+[/api/orders/import o /api/orders]
        │
-       ▼ (Ejecuta RPC atómica: crea Order + Dispatch + Líneas)
+       ▼ (Ejecuta RPC atómica: api_import_orders o api_save_order)
 [PostgreSQL / Supabase]
        ▲
-       │ (Sincronización en tiempo real / Fetch de pedidos 'pending')
+       │ (Fetch de pedidos 'pending' e 'in_progress' en app/pedidos/index.tsx)
        ▼
 [Operario Mobile (Expo)]
-       │
-       ├─ Escanea SKU por código de bulto o unidad (Cámara + Haptics)
-       ├─ Incrementa package_scanned / unit_scanned
-       └─ Al completar todos los items -> marca Order como 'assembled'
+       │ (Pantalla app/orden/[id].tsx?stage=picking)
+       ├─ Escanea SKU por código de bulto o unidad vía api_find_line_by_code
+       ├─ Registra escaneo atómico vía api_scan (incrementa package_scanned / unit_scanned)
+       └─ Al completar todas las líneas -> api_complete_picking marca Order como 'assembled'
        │
        ▼
-[Despacho y Remito Web / Mobile]
-       └─ Verificación de bultos y entrega ('delivered')
+[Control de Despacho (Web / Mobile)]
+       │ (app/despachos/index.tsx y app/orden/[id].tsx?stage=dispatch)
+       └─ Verificación de bultos/unidades -> api_complete_dispatch marca Order como 'dispatched'
 ```
 
 ## 3. Principio de Aislamiento

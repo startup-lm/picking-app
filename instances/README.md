@@ -67,3 +67,14 @@ Las variables de entorno como `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE
    PICKFLOW_INSTANCE=<nombre-instancia> eas build --platform android --profile production
    ```
    Si `PICKFLOW_INSTANCE` no está definida, la app compilará con la configuración estándar de Pickflow.
+
+### Subida de assets a EAS Build en instancias de clientes (`.easignore`)
+
+Por defecto, EAS Build empaqueta y sube el código fuente respetando las reglas de `.gitignore`. Dado que la carpeta `instances/` (a excepción de `instances/example/`) se encuentra ignorada por git para proteger assets y configuraciones específicas de clientes, al compilar una instancia personalizada en EAS se debe definir un archivo `.easignore` en la raíz de `apps/mobile` (o en la raíz del repositorio, según el contexto de compilación) que revoque la exclusión de la instancia objetivo:
+
+```gitignore
+# En .easignore para permitir la subida de la instancia a EAS Build:
+!instances/<nombre-instancia>/
+```
+
+> **Nota para la instancia `pickflow-testing`**: La instancia de pruebas y homologación interna de Pickflow utiliza la marca base por defecto (paquete `com.pickflow.app`), por lo que no define `PICKFLOW_INSTANCE` ni requiere subir carpetas adicionales desde `instances/`.
