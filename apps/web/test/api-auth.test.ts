@@ -27,6 +27,11 @@ import { GET as getSettings, PATCH as patchSettings } from '@/app/api/settings/r
 import { GET as getImportTemplate } from '@/app/api/import/template/route';
 import { POST as postImportProducts } from '@/app/api/import/products/route';
 import { POST as postImportOrders } from '@/app/api/import/orders/route';
+import { GET as getProducts, POST as postProducts } from '@/app/api/products/route';
+import { GET as getProductsLookup } from '@/app/api/products/lookup/route';
+import { PATCH as patchProduct } from '@/app/api/products/[id]/route';
+import { GET as getCustomers, POST as postCustomers } from '@/app/api/customers/route';
+import { PATCH as patchCustomer } from '@/app/api/customers/[id]/route';
 
 type RouteCase = {
   name: string;
@@ -132,6 +137,48 @@ const routes: RouteCase[] = [
     handler: postImportOrders,
     method: 'POST',
     url: 'http://localhost/api/import/orders?dry_run=1',
+  },
+  {
+    name: 'GET /api/products',
+    handler: getProducts,
+    method: 'GET',
+    url: 'http://localhost/api/products',
+  },
+  {
+    name: 'POST /api/products',
+    handler: postProducts,
+    method: 'POST',
+    url: 'http://localhost/api/products',
+  },
+  {
+    name: 'GET /api/products/lookup',
+    handler: getProductsLookup,
+    method: 'GET',
+    url: 'http://localhost/api/products/lookup?code=PF-1',
+  },
+  {
+    name: 'PATCH /api/products/[id]',
+    handler: (req) => patchProduct(req, { params: { id: '1' } }),
+    method: 'PATCH',
+    url: 'http://localhost/api/products/1',
+  },
+  {
+    name: 'GET /api/customers',
+    handler: getCustomers,
+    method: 'GET',
+    url: 'http://localhost/api/customers',
+  },
+  {
+    name: 'POST /api/customers',
+    handler: postCustomers,
+    method: 'POST',
+    url: 'http://localhost/api/customers',
+  },
+  {
+    name: 'PATCH /api/customers/[id]',
+    handler: (req) => patchCustomer(req, { params: { id: '1' } }),
+    method: 'PATCH',
+    url: 'http://localhost/api/customers/1',
   },
 ];
 
