@@ -13,12 +13,12 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 
 // Import all route handlers
-import { GET as getOrdersAll } from '@/app/api/orders/all/route';
-import { GET as getOrdersPending } from '@/app/api/orders/pending/route';
+import { GET as getOrders, POST as postOrders } from '@/app/api/orders/route';
+import { GET as getOrder } from '@/app/api/orders/[id]/route';
+import { POST as postOrderStatus } from '@/app/api/orders/[id]/status/route';
 import { POST as postOrdersCancel } from '@/app/api/orders/cancel/route';
 import { GET as getOrdersPrint } from '@/app/api/orders/[id]/print/route';
-import { POST as postOrdersProcessCsv } from '@/app/api/orders/process-csv/route';
-import { POST as postProductsProcessCsv } from '@/app/api/products/process-csv/route';
+import { GET as getDashboard } from '@/app/api/dashboard/route';
 import { GET as getReportsOrdersByDate } from '@/app/api/reports/orders-by-date/route';
 import { GET as getReportsOrdersByDateCsv } from '@/app/api/reports/orders-by-date.csv/route';
 import { GET as getUsers, POST as postUsers } from '@/app/api/users/route';
@@ -43,16 +43,28 @@ type RouteCase = {
 
 const routes: RouteCase[] = [
   {
-    name: 'GET /api/orders/all',
-    handler: getOrdersAll,
+    name: 'GET /api/orders',
+    handler: getOrders,
     method: 'GET',
-    url: 'http://localhost/api/orders/all',
+    url: 'http://localhost/api/orders',
   },
   {
-    name: 'GET /api/orders/pending',
-    handler: getOrdersPending,
+    name: 'POST /api/orders',
+    handler: postOrders,
+    method: 'POST',
+    url: 'http://localhost/api/orders',
+  },
+  {
+    name: 'GET /api/orders/[id]',
+    handler: (req) => getOrder(req, { params: { id: '1' } }),
     method: 'GET',
-    url: 'http://localhost/api/orders/pending',
+    url: 'http://localhost/api/orders/1',
+  },
+  {
+    name: 'POST /api/orders/[id]/status',
+    handler: (req) => postOrderStatus(req, { params: { id: '1' } }),
+    method: 'POST',
+    url: 'http://localhost/api/orders/1/status',
   },
   {
     name: 'POST /api/orders/cancel',
@@ -67,16 +79,10 @@ const routes: RouteCase[] = [
     url: 'http://localhost/api/orders/1/print',
   },
   {
-    name: 'POST /api/orders/process-csv',
-    handler: postOrdersProcessCsv,
-    method: 'POST',
-    url: 'http://localhost/api/orders/process-csv',
-  },
-  {
-    name: 'POST /api/products/process-csv',
-    handler: postProductsProcessCsv,
-    method: 'POST',
-    url: 'http://localhost/api/products/process-csv',
+    name: 'GET /api/dashboard',
+    handler: getDashboard,
+    method: 'GET',
+    url: 'http://localhost/api/dashboard',
   },
   {
     name: 'GET /api/reports/orders-by-date',
