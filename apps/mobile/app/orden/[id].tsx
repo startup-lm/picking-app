@@ -9,13 +9,21 @@ import SortModal from '@/components/order-detail/SortModal';
 import AisleFilter from '@/components/order-detail/AisleFilter';
 import StatusFilter from '@/components/order-detail/StatusFilter';
 import OrderLineItem from '@/components/order-detail/OrderLineItem';
+import NextLocationCard from '@/components/order-detail/NextLocationCard';
+import CodeInput from '@/components/order-detail/CodeInput';
 import FooterPrimaryAction from '@/components/order-detail/FooterPrimaryAction';
-import { computeAisleStats, filterAndSortRows, getPendientes, pendientesResumen } from '@/utils/order-detail';
+import {
+  computeAisleStats,
+  filterAndSortRows,
+  getPendientes,
+  nextLine,
+} from '@/utils/order-detail';
 import { filterByStatus, type Statuses } from '@/utils/completion';
 import { remaining, progressOf } from '@/utils/progress';
 import { findLineByCode, scanLine, completeOrder } from '@/lib/repository/scan';
 import { STAGE_STATUSES, type OrderDetailLine } from '@/lib/repository/orders';
-import { errorMessage } from '@/lib/errors';
+import { errorMessage, handleError } from '@/lib/errors';
+import { feedback } from '@/lib/feedback';
 import type { Stage, ScanKind } from '@/types/rpc';
 import { useScannerFlow } from '@/hooks/use-scanner-flows';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +56,10 @@ export default function OrdenDetalleScreen() {
   );
 
   // Aisles en base al subconjunto filtrado por estado
-  const aisleStats = useMemo(() => computeAisleStats(completionFiltered, stage), [completionFiltered, stage]);
+  const aisleStats = useMemo(
+    () => computeAisleStats(completionFiltered, stage),
+    [completionFiltered, stage]
+  );
 
   // Lista final: aisles + orden
   const list = useMemo(
@@ -60,28 +71,37 @@ export default function OrdenDetalleScreen() {
   const allComplete = pendientes.length === 0;
   const isStageActive = order ? STAGE_STATUSES[stage].includes(order.status) : false;
 
+  // Siguiente ubicación a recorrer
+  const nextItem = useMemo(() => nextLine(lines, stage), [lines, stage]);
+
   const handleCode = useCallback(
-    async (rawInput: string): Promise<{ ok: boolean; sku?: string }> => {
+    async (rawInput: string): Promise<{ ok: boolean; message: string }> => {
       const code = (rawInput ?? '').trim();
-      if (!code) return { ok: false };
+      if (!code) return { ok: false, message: 'Código vacío' };
 
       let found;
       try {
         found = await findLineByCode(orderId, code);
       } catch (e) {
-        Alert.alert('Error', errorMessage(e));
-        return { ok: false };
+        const message = await handleError(e);
+        await feedback('error');
+        showToast(message, 'error');
+        return { ok: false, message };
       }
 
       const line = lines.find((l) => l.id === found.line.id);
       if (!line) {
-        Alert.alert('Error', errorMessage({ message: 'not_in_order' }));
-        return { ok: false };
+        const message = errorMessage('not_in_order');
+        await feedback('error');
+        showToast(message, 'error');
+        return { ok: false, message };
       }
 
       if (remaining(line, stage, found.kind) <= 0) {
-        Alert.alert('Límite', errorMessage({ message: 'out_of_range' }));
-        return { ok: false };
+        const message = errorMessage('out_of_range');
+        await feedback('error');
+        showToast(message, 'error');
+        return { ok: false, message };
       }
 
       // Snapshot para revertir en error
@@ -94,13 +114,15 @@ export default function OrdenDetalleScreen() {
           if (stage === 'picking') {
             return {
               ...l,
-              package_scanned: found.kind === 'package' ? l.package_scanned + 1 : l.package_scanned,
+              package_scanned:
+                found.kind === 'package' ? l.package_scanned + 1 : l.package_scanned,
               unit_scanned: found.kind === 'unit' ? l.unit_scanned + 1 : l.unit_scanned,
             };
           } else {
             return {
               ...l,
-              package_checked: found.kind === 'package' ? l.package_checked + 1 : l.package_checked,
+              package_checked:
+                found.kind === 'package' ? l.package_checked + 1 : l.package_checked,
               unit_checked: found.kind === 'unit' ? l.unit_checked + 1 : l.unit_checked,
             };
           }
@@ -129,10 +151,24 @@ export default function OrdenDetalleScreen() {
             };
           })
         );
-        showToast(`Artículo ${found.product.sku} escaneado`);
-        return { ok: true, sku: found.product.sku };
+
+        const total = found.kind === 'package' ? res.line.package_total : res.line.unit_total;
+        const done =
+          found.kind === 'package'
+            ? stage === 'picking'
+              ? res.line.package_scanned
+              : res.line.package_checked
+            : stage === 'picking'
+            ? res.line.unit_scanned
+            : res.line.unit_checked;
+        const kindLabel = found.kind === 'package' ? 'bultos' : 'unidades';
+        const message = `${found.product.sku} · ${kindLabel} ${done}/${total}`;
+
+        await feedback('success');
+        showToast(message, 'success');
+        return { ok: true, message };
       } catch (e) {
-        // Error: revertir el +1 (volver a los contadores anteriores) y Alert.alert('Error', errorMessage(e))
+        // Error: revertir el +1 (volver a los contadores anteriores)
         setLines((curr) =>
           curr.map((l) => {
             if (l.id !== line.id) return l;
@@ -145,17 +181,17 @@ export default function OrdenDetalleScreen() {
             };
           })
         );
-        Alert.alert('Error', errorMessage(e));
-        return { ok: false };
+        const message = await handleError(e);
+        await feedback('error');
+        showToast(message, 'error');
+        return { ok: false, message };
       }
     },
     [lines, orderId, setLines, showToast, stage]
   );
 
-  const { openScanner, Scanner } = useScannerFlow({
-    onCode: async (data) => {
-      await handleCode(data);
-    },
+  const { openScanner, Scanner, submitCode } = useScannerFlow({
+    onCode: handleCode,
     title: 'Escaneá un código',
   });
 
@@ -170,7 +206,8 @@ export default function OrdenDetalleScreen() {
       const hasUnit = progress.unitDone > 0;
 
       if (!hasPkg && !hasUnit) {
-        Alert.alert('Sin escaneos', 'No hay escaneos para restar en este artículo.');
+        void feedback('warning');
+        showToast('No hay escaneos para restar en este artículo.', 'error');
         return;
       }
 
@@ -221,7 +258,11 @@ export default function OrdenDetalleScreen() {
               };
             })
           );
-          showToast(`Se restó 1 ${kind === 'package' ? 'bulto' : 'unidad'} a ${item.product.sku}`);
+          await feedback('success');
+          showToast(
+            `Se restó 1 ${kind === 'package' ? 'bulto' : 'unidad'} a ${item.product.sku}`,
+            'success'
+          );
         } catch (e) {
           // Revertir
           setLines((curr) =>
@@ -236,7 +277,9 @@ export default function OrdenDetalleScreen() {
               };
             })
           );
-          Alert.alert('Error', errorMessage(e));
+          const message = await handleError(e);
+          await feedback('error');
+          showToast(message, 'error');
         }
       };
 
@@ -244,18 +287,40 @@ export default function OrdenDetalleScreen() {
       if (hasPkg && hasUnit) {
         Alert.alert('Descontar escaneo', `¿Qué deseas restar de ${skuLabel}?`, [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Restar 1 Bulto', onPress: () => { void applyDecrement('package'); } },
-          { text: 'Restar 1 Unidad', onPress: () => { void applyDecrement('unit'); } },
+          {
+            text: 'Restar 1 Bulto',
+            onPress: () => {
+              void applyDecrement('package');
+            },
+          },
+          {
+            text: 'Restar 1 Unidad',
+            onPress: () => {
+              void applyDecrement('unit');
+            },
+          },
         ]);
       } else if (hasPkg) {
         Alert.alert('Descontar escaneo', `¿Deseas restar 1 bulto escaneado de ${skuLabel}?`, [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Restar', style: 'destructive', onPress: () => { void applyDecrement('package'); } },
+          {
+            text: 'Restar',
+            style: 'destructive',
+            onPress: () => {
+              void applyDecrement('package');
+            },
+          },
         ]);
       } else {
         Alert.alert('Descontar escaneo', `¿Deseas restar 1 unidad escaneada de ${skuLabel}?`, [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Restar', style: 'destructive', onPress: () => { void applyDecrement('unit'); } },
+          {
+            text: 'Restar',
+            style: 'destructive',
+            onPress: () => {
+              void applyDecrement('unit');
+            },
+          },
         ]);
       }
     },
@@ -264,19 +329,25 @@ export default function OrdenDetalleScreen() {
 
   const onConfirm = useCallback(async () => {
     if (!allComplete) {
-      Alert.alert('Faltan productos por escanear', pendientesResumen(pendientes, stage));
+      await feedback('error');
+      showToast('Faltan productos por escanear', 'error');
       return;
     }
     try {
       setConfirming(true);
       await completeOrder(orderId, stage);
+      await feedback('success');
+      const action = stage === 'picking' ? 'armado' : 'despachado';
+      showToast(`Pedido ${order?.order_number ?? ''} ${action}`, 'success');
       router.back();
     } catch (e) {
-      Alert.alert('Error', errorMessage(e));
+      const message = await handleError(e);
+      await feedback('error');
+      showToast(message, 'error');
     } finally {
       setConfirming(false);
     }
-  }, [allComplete, orderId, pendientes, stage]);
+  }, [allComplete, order?.order_number, orderId, showToast, stage]);
 
   if (loading) {
     return (
@@ -303,6 +374,12 @@ export default function OrdenDetalleScreen() {
   return (
     <ThemedView style={{ flex: 1, padding: 20, gap: 12 }}>
       <Stack.Screen options={{ title: headerTitle }} />
+
+      {/* SIGUIENTE UBICACIÓN */}
+      <NextLocationCard line={nextItem} stage={stage} />
+
+      {/* INPUT MANUAL / BLUETOOTH */}
+      <CodeInput onSubmitCode={submitCode} disabled={!isStageActive} />
 
       {/* FILTROS */}
       <ThemedView style={styles.filterBox}>

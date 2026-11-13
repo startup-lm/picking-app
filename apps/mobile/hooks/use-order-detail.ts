@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { supabase } from '@/lib/supabase/client';
 import { getOrderDetail, type OrderDetail, type OrderDetailLine } from '@/lib/repository/orders';
-import { errorMessage } from '@/lib/errors';
+import { handleError } from '@/lib/errors';
 import type { OrderStatus } from '@/types/rpc';
 
 export function useOrderDetail(orderId: number) {
@@ -20,7 +19,7 @@ export function useOrderDetail(orderId: number) {
         setLines(data.lines);
       }
     } catch (e) {
-      Alert.alert('Error', errorMessage(e));
+      await handleError(e);
     }
   }, [orderId]);
 
