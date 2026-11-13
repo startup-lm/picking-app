@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDate, formatDateTime } from '@/utils/date';
+import { useBranding } from '@/components/BrandingProvider';
 import ConfirmCancelModal from '@/components/orders/ConfirmCancelModal';
 import { cancelOrders } from '@/lib/api/orders';
 import type { OrderStatus } from '@/types/rpc';
@@ -46,6 +47,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 function PedidosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { timezone } = useBranding();
 
   // Selected statuses
   const initialStatusParam = searchParams.get('status');
@@ -421,7 +423,7 @@ function PedidosContent() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-text">
-                      {order.due_date ? formatDate(order.due_date) : '—'}
+                      {order.due_date ? formatDate(order.due_date, timezone) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -434,7 +436,7 @@ function PedidosContent() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted">
-                      {formatDateTime(order.created_at)}
+                      {formatDateTime(order.created_at, timezone)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">

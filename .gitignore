@@ -40,3 +40,8 @@ Thumbs.db
 coverage/
 *.tsbuildinfo
 .eslintcache
+
+# Instances
+instances/*
+!instances/example/
+!instances/README.md

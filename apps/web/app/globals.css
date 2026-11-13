@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary: #0F4C5C;
+  --color-accent: #F2A541;
+  --color-accent-soft: #FCE7C8;
+}
+
 /* Base con tu paleta */
 html, body { height: 100%; }
 body { @apply bg-card text-text; }

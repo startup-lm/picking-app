@@ -24,6 +24,7 @@ import { GET as getReportsOrdersByDateCsv } from '@/app/api/reports/orders-by-da
 import { GET as getUsers, POST as postUsers } from '@/app/api/users/route';
 import { PATCH as patchUser } from '@/app/api/users/[id]/route';
 import { GET as getSettings, PATCH as patchSettings } from '@/app/api/settings/route';
+import { POST as postSettingsLogo, DELETE as deleteSettingsLogo } from '@/app/api/settings/logo/route';
 import { GET as getImportTemplate } from '@/app/api/import/template/route';
 import { POST as postImportProducts } from '@/app/api/import/products/route';
 import { POST as postImportOrders } from '@/app/api/import/orders/route';
@@ -125,6 +126,18 @@ const routes: RouteCase[] = [
     handler: patchSettings,
     method: 'PATCH',
     url: 'http://localhost/api/settings',
+  },
+  {
+    name: 'POST /api/settings/logo',
+    handler: postSettingsLogo,
+    method: 'POST',
+    url: 'http://localhost/api/settings/logo',
+  },
+  {
+    name: 'DELETE /api/settings/logo',
+    handler: deleteSettingsLogo,
+    method: 'DELETE',
+    url: 'http://localhost/api/settings/logo',
   },
   {
     name: 'GET /api/import/template',

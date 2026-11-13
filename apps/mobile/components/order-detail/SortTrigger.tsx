@@ -2,8 +2,8 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 type Props = {
   sortKey: 'location' | 'sku';
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export default function SortTrigger({ sortKey, sortDir, onOpen }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const label = `Orden: ${sortKey === 'location' ? 'Ubicación' : 'Artículo'} ${sortDir === 'asc' ? 'A→Z' : 'Z→A'}`;
 

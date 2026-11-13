@@ -5,7 +5,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(32);
+SELECT plan(35);
 
 -- Crear usuarios de prueba según la especificación
 INSERT INTO auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) VALUES
@@ -34,6 +34,8 @@ SELECT throws_ok($$ SELECT * FROM app_settings $$, '42501', NULL, 'anon SELECT a
 SELECT throws_ok($$ SELECT api_scan(1, 'picking', 'unit', 1, gen_random_uuid()) $$, '42501', NULL, 'anon api_scan raises 42501');
 SELECT throws_ok($$ SELECT api_import_orders('[]'::jsonb) $$, '42501', NULL, 'anon api_import_orders raises 42501');
 SELECT throws_ok($$ SELECT api_report_orders(current_date, current_date) $$, '42501', NULL, 'anon api_report_orders raises 42501');
+SELECT is((api_public_branding() ->> 'app_name'), 'Pickflow', 'anon api_public_branding returns app_name Pickflow');
+SELECT is((SELECT count(*)::int FROM jsonb_object_keys(api_public_branding())), 5, 'api_public_branding returns exactly 5 keys');
 
 -- 3. Operador activo: no ve pedidos en borrador
 RESET role;
@@ -130,8 +132,9 @@ UPDATE app_settings SET app_name = 'Pickflow Operador' WHERE id = 1;
 RESET role;
 SELECT is((SELECT app_name FROM app_settings WHERE id = 1), 'Pickflow Admin', 'app_settings updated by admin and unaffected by operator');
 
--- 11. storage.buckets 'imports' tiene public = false
+-- 11. storage.buckets 'imports' tiene public = false y 'branding' tiene public = true
 SELECT is((SELECT public FROM storage.buckets WHERE id = 'imports'), false, 'Bucket imports has public = false');
+SELECT is((SELECT public FROM storage.buckets WHERE id = 'branding'), true, 'Bucket branding has public = true');
 
 SELECT * FROM finish();
 ROLLBACK;

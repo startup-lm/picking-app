@@ -430,6 +430,10 @@ export type Database = {
         }
         Returns: Json
       }
+      api_public_branding: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       api_report_orders: {
         Args: {
           p_from: string

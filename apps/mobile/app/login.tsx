@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,15 +12,16 @@ import {
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
+import { useBranding } from '@/lib/branding-context';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { consumeSignOutReason } from '@/lib/session';
 
 export default function LoginScreen() {
-  const scheme = useColorScheme() ?? 'light';
-  const palette = Colors[scheme];
+  const palette = usePalette();
+  const { appName, logoUrl } = useBranding();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   const [email, setEmail] = useState('');
@@ -80,6 +82,21 @@ export default function LoginScreen() {
         style={styles.inner}
       >
         <View style={styles.card}>
+          <View style={styles.brandingHeader}>
+            {logoUrl ? (
+              <Image
+                source={{ uri: logoUrl }}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel={appName}
+              />
+            ) : (
+              <ThemedText type="title" style={styles.brandTitle}>
+                {appName}
+              </ThemedText>
+            )}
+          </View>
+
           <ThemedText type="subtitle" style={styles.title}>
             Iniciar sesión
           </ThemedText>
@@ -171,6 +188,20 @@ const makeStyles = (p: Palette) =>
       borderColor: p.borderSoft,
       padding: 24,
       gap: 16,
+    },
+    brandingHeader: {
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    logo: {
+      height: 48,
+      width: 180,
+    },
+    brandTitle: {
+      color: p.text,
+      textAlign: 'center',
+      fontSize: 22,
+      fontWeight: '700',
     },
     title: {
       textAlign: 'center',

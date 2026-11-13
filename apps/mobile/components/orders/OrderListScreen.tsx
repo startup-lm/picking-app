@@ -6,8 +6,8 @@ import { ThemedView } from '@/components/themed-view';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import ButtonOptions from '@/components/ui/button-options';
 import MenuOptions from '@/components/ui/menu-options';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 import { listOrders, type OrderListItem } from '@/lib/repository/orders';
 import { generateOrderPdf } from '@/lib/print/printOrder';
 import { openOrSharePdf } from '@/lib/print/openPDF';
@@ -20,7 +20,7 @@ type Props = {
 };
 
 export default function OrderListScreen({ stage }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   // Menú contextual (solo para picking)

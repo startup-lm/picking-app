@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { ThemedText } from '../themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 type Props = {
   visible: boolean;
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export default function ConfirmDialog({visible, message, confirmLabel = 'Confirmar',cancelLabel = 'Cancelar', onConfirm, onCancel, }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   return (

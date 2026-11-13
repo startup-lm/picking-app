@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const outDir = path.resolve(__dirname, '../apps/mobile/assets/images');
 
 // PNG CRC32 lookup table
 const crcTable = new Uint32Array(256);
@@ -81,6 +80,18 @@ const AMBER = [0xf2, 0xa5, 0x41, 0xff];     // #F2A541
 const WHITE = [0xff, 0xff, 0xff, 0xff];     // #FFFFFF
 const TRANSPARENT = [0, 0, 0, 0];
 
+function parseHexColor(hex, fallback) {
+  if (!hex) return fallback;
+  const match = /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/.exec(hex.trim());
+  if (!match) return fallback;
+  return [
+    parseInt(match[1], 16),
+    parseInt(match[2], 16),
+    parseInt(match[3], 16),
+    0xff,
+  ];
+}
+
 function circlePixel(bg, fg, radiusRatio = 0.3) {
   return (x, y, width, height) => {
     const cx = (width - 1) / 2;
@@ -99,16 +110,40 @@ function solidPixel(color) {
   return () => color;
 }
 
-const icons = [
-  { name: 'icon.png', w: 1024, h: 1024, fn: circlePixel(PETROLEUM, AMBER, 0.3) },
-  { name: 'adaptive-icon.png', w: 1024, h: 1024, fn: circlePixel(PETROLEUM, AMBER, 0.3) },
-  { name: 'android-adaptive-foreground.png', w: 432, h: 432, fn: circlePixel(TRANSPARENT, AMBER, 0.3) },
-  { name: 'android-icon-foreground.png', w: 512, h: 512, fn: circlePixel(TRANSPARENT, AMBER, 0.3) },
-  { name: 'splash-icon.png', w: 1024, h: 1024, fn: circlePixel(TRANSPARENT, AMBER, 0.3) },
-  { name: 'android-icon-monochrome.png', w: 432, h: 432, fn: circlePixel(TRANSPARENT, WHITE, 0.3) },
-  { name: 'android-icon-background.png', w: 512, h: 512, fn: solidPixel(PETROLEUM) },
-  { name: 'favicon.png', w: 48, h: 48, fn: circlePixel(PETROLEUM, AMBER, 0.3) },
-];
+// Parse command line arguments
+const args = process.argv.slice(2);
+let outDir = path.resolve(__dirname, '../apps/mobile/assets/images');
+let primaryColor = PETROLEUM;
+let accentColor = AMBER;
+let isInstanceMode = false;
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--out' && i + 1 < args.length) {
+    outDir = path.resolve(process.cwd(), args[++i]);
+    isInstanceMode = true;
+  } else if (args[i] === '--primary' && i + 1 < args.length) {
+    primaryColor = parseHexColor(args[++i], PETROLEUM);
+  } else if (args[i] === '--accent' && i + 1 < args.length) {
+    accentColor = parseHexColor(args[++i], AMBER);
+  }
+}
+
+const icons = isInstanceMode
+  ? [
+      { name: 'icon.png', w: 1024, h: 1024, fn: circlePixel(primaryColor, accentColor, 0.3) },
+      { name: 'adaptive-foreground.png', w: 432, h: 432, fn: circlePixel(TRANSPARENT, accentColor, 0.3) },
+      { name: 'splash.png', w: 1024, h: 1024, fn: circlePixel(TRANSPARENT, accentColor, 0.3) },
+    ]
+  : [
+      { name: 'icon.png', w: 1024, h: 1024, fn: circlePixel(primaryColor, accentColor, 0.3) },
+      { name: 'adaptive-icon.png', w: 1024, h: 1024, fn: circlePixel(primaryColor, accentColor, 0.3) },
+      { name: 'android-adaptive-foreground.png', w: 432, h: 432, fn: circlePixel(TRANSPARENT, accentColor, 0.3) },
+      { name: 'android-icon-foreground.png', w: 512, h: 512, fn: circlePixel(TRANSPARENT, accentColor, 0.3) },
+      { name: 'splash-icon.png', w: 1024, h: 1024, fn: circlePixel(TRANSPARENT, accentColor, 0.3) },
+      { name: 'android-icon-monochrome.png', w: 432, h: 432, fn: circlePixel(TRANSPARENT, WHITE, 0.3) },
+      { name: 'android-icon-background.png', w: 512, h: 512, fn: solidPixel(primaryColor) },
+      { name: 'favicon.png', w: 48, h: 48, fn: circlePixel(primaryColor, accentColor, 0.3) },
+    ];
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -116,5 +151,5 @@ for (const icon of icons) {
   const filePath = path.join(outDir, icon.name);
   const pngBuf = createPng(icon.w, icon.h, icon.fn);
   fs.writeFileSync(filePath, pngBuf);
-  console.log(`Generated ${icon.name} (${icon.w}x${icon.h})`);
+  console.log(`Generated ${icon.name} (${icon.w}x${icon.h}) at ${filePath}`);
 }

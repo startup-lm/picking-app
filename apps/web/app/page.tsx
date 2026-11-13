@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDate } from '@/utils/date';
+import { useBranding } from '@/components/BrandingProvider';
 import type { OrderStatus } from '@/types/rpc';
 
 type DashboardData = {
@@ -47,6 +48,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { timezone } = useBranding();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +216,7 @@ export default function DashboardPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-text">
-                            {order.due_date ? formatDate(order.due_date) : '—'}
+                            {order.due_date ? formatDate(order.due_date, timezone) : '—'}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">

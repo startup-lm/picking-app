@@ -4,24 +4,26 @@ import type { ReportDay } from '@/types/rpc';
 import OrderLinesTable from './OrderLinesTable';
 import { formatDate, formatDateTime } from '@/utils/date';
 import { estadoLabel } from '@/utils/report';
+import { useBranding } from '@/components/BrandingProvider';
 
 export default function DayGroupView({ group }: { group: ReportDay }) {
+  const { timezone } = useBranding();
   const orders = group.orders || [];
 
   return (
     <section className="rounded-xl border border-border bg-bg px-4 py-6">
       <h3 className="mb-4 text-base font-semibold">
-        {formatDate(group.day)} — {orders.length} pedido{orders.length === 1 ? '' : 's'}
+        {formatDate(group.day, timezone)} — {orders.length} pedido{orders.length === 1 ? '' : 's'}
       </h3>
 
       <div className="space-y-6">
         {orders.map((o) => {
           const estado = estadoLabel(o.status);
           const preparadoInfo = o.assembled_at
-            ? `Preparado: ${formatDateTime(o.assembled_at)}${o.assembled_by_name ? ` por ${o.assembled_by_name}` : ''}`
+            ? `Preparado: ${formatDateTime(o.assembled_at, timezone)}${o.assembled_by_name ? ` por ${o.assembled_by_name}` : ''}`
             : '';
           const despachoInfo = o.dispatched_at
-            ? ` · Despachado: ${formatDateTime(o.dispatched_at)}`
+            ? ` · Despachado: ${formatDateTime(o.dispatched_at, timezone)}`
             : '';
 
           return (

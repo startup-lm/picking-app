@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDate, formatDateTime } from '@/utils/date';
+import { useBranding } from '@/components/BrandingProvider';
 import ConfirmCancelModal from '@/components/orders/ConfirmCancelModal';
 import { cancelOrders } from '@/lib/api/orders';
 import type { OrderStatus } from '@/types/rpc';
@@ -72,6 +73,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 export default function PedidoDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { timezone } = useBranding();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -266,7 +268,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
           <div className="text-right sm:text-right">
             <span className="block text-xs text-muted uppercase">Fecha de entrega</span>
             <span className="text-sm font-semibold text-text">
-              {order.due_date ? formatDate(order.due_date) : 'No definida'}
+              {order.due_date ? formatDate(order.due_date, timezone) : 'No definida'}
             </span>
           </div>
         </div>
@@ -282,7 +284,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
         <div className="mt-6 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="text-muted block">Creado</span>
-            <span className="font-semibold text-text">{formatDateTime(order.created_at)}</span>
+            <span className="font-semibold text-text">{formatDateTime(order.created_at, timezone)}</span>
             {order.created_by_name && (
               <span className="text-muted block">por {order.created_by_name}</span>
             )}
@@ -291,7 +293,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
           {order.started_at && (
             <div>
               <span className="text-muted block">Preparación iniciada</span>
-              <span className="font-semibold text-text">{formatDateTime(order.started_at)}</span>
+              <span className="font-semibold text-text">{formatDateTime(order.started_at, timezone)}</span>
               {order.started_by_name && (
                 <span className="text-muted block">por {order.started_by_name}</span>
               )}
@@ -301,7 +303,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
           {order.assembled_at && (
             <div>
               <span className="text-muted block">Preparado</span>
-              <span className="font-semibold text-text">{formatDateTime(order.assembled_at)}</span>
+              <span className="font-semibold text-text">{formatDateTime(order.assembled_at, timezone)}</span>
               {order.assembled_by_name && (
                 <span className="text-muted block">por {order.assembled_by_name}</span>
               )}
@@ -311,7 +313,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
           {order.dispatched_at && (
             <div>
               <span className="text-muted block">Despachado</span>
-              <span className="font-semibold text-text">{formatDateTime(order.dispatched_at)}</span>
+              <span className="font-semibold text-text">{formatDateTime(order.dispatched_at, timezone)}</span>
               {order.dispatched_by_name && (
                 <span className="text-muted block">por {order.dispatched_by_name}</span>
               )}
@@ -321,7 +323,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
           {order.cancelled_at && (
             <div className="col-span-full rounded-lg bg-danger/10 border border-danger/30 p-3">
               <span className="text-danger font-semibold block">
-                Cancelado el {formatDateTime(order.cancelled_at)}
+                Cancelado el {formatDateTime(order.cancelled_at, timezone)}
                 {order.cancelled_by_name ? ` por ${order.cancelled_by_name}` : ''}
               </span>
               {order.cancel_reason && (

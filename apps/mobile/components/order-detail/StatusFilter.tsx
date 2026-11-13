@@ -2,8 +2,8 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, type Palette } from '@/constants/theme';
+import { type Palette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 import type { Statuses } from '@/utils/completion';
 
 type Props = {
@@ -18,7 +18,7 @@ const options: { key: Statuses; label: string }[] = [
 ];
 
 export default function StatusFilter({ status, onChange }: Props) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = usePalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
 
   return (
