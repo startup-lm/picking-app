@@ -1,0 +1,12 @@
+{
+  "name": "Pickflow Ejemplo",
+  "slug": "pickflow-example",
+  "scheme": "pickflow-example",
+  "androidPackage": "com.pickflow.example",
+  "primaryColor": "#0F4C5C",
+  "accentColor": "#F2A541",
+  "icon": "icon.png",
+  "adaptiveIconForeground": "adaptive-foreground.png",
+  "splashImage": "splash.png",
+  "easProjectId": ""
+}
