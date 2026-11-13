@@ -8,14 +8,15 @@ type ProductUpdate = Database['public']['Tables']['products']['Update'];
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const auth = await requireUser('admin');
   if (!auth.ok) {
     return auth.response;
   }
 
-  const id = parseInt(params.id, 10);
+  const { id: rawId } = await params;
+  const id = parseInt(rawId, 10);
   if (isNaN(id) || id <= 0) {
     return jsonError(400, 'invalid_argument', 'ID de producto inválido');
   }

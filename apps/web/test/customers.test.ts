@@ -5,7 +5,7 @@ import { fakeSupabase } from './helpers/fake-supabase';
 let currentClient: any;
 
 vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: () => currentClient,
+  createSupabaseServerClient: async () => currentClient,
 }));
 
 import { GET as getCustomers, POST as postCustomers } from '@/app/api/customers/route';
@@ -176,7 +176,7 @@ describe('Customers API', () => {
         }),
       });
 
-      const res = await patchCustomer(req, { params: { id: '1' } });
+      const res = await patchCustomer(req, { params: Promise.resolve({ id: '1' }) });
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.customer.name).toBe('Cliente Modificado');
@@ -199,7 +199,7 @@ describe('Customers API', () => {
         }),
       });
 
-      const res = await patchCustomer(req, { params: { id: '999' } });
+      const res = await patchCustomer(req, { params: Promise.resolve({ id: '999' }) });
       expect(res.status).toBe(404);
     });
   });

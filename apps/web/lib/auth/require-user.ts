@@ -5,7 +5,7 @@ export type Role = 'admin' | 'operator';
 
 export type AuthOk = {
   ok: true;
-  supabase: ReturnType<typeof createSupabaseServerClient>;
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   user: { id: string; email: string | null };
   profile: { role: Role; is_active: boolean; name: string };
 };
@@ -16,7 +16,7 @@ export type AuthFail = {
 };
 
 export async function requireUser(role: Role = 'admin'): Promise<AuthOk | AuthFail> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

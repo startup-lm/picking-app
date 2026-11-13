@@ -7,13 +7,13 @@ export const runtime = 'nodejs';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireUser('admin');
   if (!auth.ok) return auth.response;
   const db = auth.supabase;
 
-  const id = params?.id;
+  const { id } = await params;
   if (!id || typeof id !== 'string') {
     return jsonError(400, 'invalid_argument', 'ID inválido');
   }

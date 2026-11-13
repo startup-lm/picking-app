@@ -16,7 +16,7 @@ function makeAdminSupabase(opts: any = {}) {
 let currentClient = makeAdminSupabase();
 
 vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: () => currentClient,
+  createSupabaseServerClient: async () => currentClient,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDate, formatDateTime } from '@/utils/date';
@@ -71,7 +71,8 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   cancelled: 'bg-danger/20 text-danger border-danger',
 };
 
-export default function PedidoDetailPage({ params }: { params: { id: string } }) {
+export default function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { timezone } = useBranding();
   const [order, setOrder] = useState<OrderDetail | null>(null);
@@ -86,7 +87,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/orders/${params.id}`, { cache: 'no-store' });
+      const res = await fetch(`/api/orders/${id}`, { cache: 'no-store' });
       if (!res.ok) {
         if (res.status === 404) throw new Error('Pedido no encontrado');
         throw new Error('Error al cargar el pedido');
@@ -103,7 +104,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
   useEffect(() => {
     loadOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [id]);
 
   const handleSetStatus = async (nextStatus: 'pending' | 'draft') => {
     if (actionBusy || !order) return;

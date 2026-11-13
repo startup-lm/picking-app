@@ -70,8 +70,8 @@ Guía paso a paso para configurar y desplegar la instancia de pruebas `pickflow-
 3. **Despliegue y configuración de URLs**:
    - Ejecutar el deploy inicial.
    - Una vez obtenida la URL pública de Netlify (ej. `https://<sitio>.netlify.app`), volver a Supabase (**Auth → URL Configuration**) y completar **Site URL** y **Redirect URLs** (`https://<sitio>/update-password`).
-4. **Nota sobre versión de Next.js**:
-   - *Riesgo anotado, no resuelto*: Netlify avisó en mayo de 2026 que no planea parches de seguridad para Next.js 13.x/14.x y recomienda 15.x/16.x. Queda documentado como pendiente de actualización antes de salir a producción definitiva.
+4. **Versión de Next.js**:
+   - La web usa Next.js 16 (React 19), con soporte de seguridad vigente. Resuelve el aviso de Netlify de mayo de 2026 sobre Next.js 13.x/14.x.
 
 ### 3. App Android (EAS)
 

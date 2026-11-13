@@ -10,7 +10,7 @@ Este documento define la arquitectura, convenciones, comandos operativos y está
 Permite gestionar la carga masiva de pedidos por CSV/Excel, el catálogo de productos con códigos de barra de bulto y unidad, la preparación física en depósito mediante terminal móvil con escáner de cámara, y el despacho/remito final.
 
 ### Estructura Monorepo:
-- **`apps/web`**: Panel de control administrativo web construido con **Next.js 14 (App Router)**, **TypeScript** y **Tailwind CSS**.
+- **`apps/web`**: Panel de control administrativo web construido con **Next.js 16 (React 19, App Router)**, **TypeScript** y **Tailwind CSS**.
 - **`apps/mobile`**: Aplicación móvil para operarios de depósito construida con **React Native (0.81)**, **Expo SDK 54**, **Expo Router (v6)**, escáner de códigos de barra (`expo-camera`), respuesta háptica (`expo-haptics`) y audio (`expo-audio`).
 - **`supabase/`**: Esquema de base de datos relacional PostgreSQL con funciones RPC transaccionales e índices de alto rendimiento para escaneo en tiempo real.
 
@@ -19,7 +19,7 @@ Permite gestionar la carga masiva de pedidos por CSV/Excel, el catálogo de prod
 ## 2. Comandos Operativos y Entorno de Desarrollo
 
 ### 2.1. Instalación de Dependencias
-> **IMPORTANTE**: Debido a que `apps/web` usa React 18 (Next.js 14) y `apps/mobile` usa React 19 (Expo 54), las dependencias de cada app deben gestionarse de forma aislada:
+> **IMPORTANTE**: Aunque tanto `apps/web` como `apps/mobile` usan React 19 (Next.js 16 y Expo 54), las dependencias de cada app deben gestionarse de forma aislada:
 ```bash
 # Instalar dependencias en ambas apps:
 npm ci --prefix apps/web
@@ -92,7 +92,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 
 ## 4. Arquitectura y Reglas por Módulo
 
-### 4.1. `apps/web` (Next.js 14 App Router)
+### 4.1. `apps/web` (Next.js 16 App Router)
 - **Rutas y Páginas**:
   - `/`: Panel del día (dashboard de operaciones y accesos directos).
   - `/pedidos`: Listado de pedidos, con subrutas:
@@ -173,7 +173,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 4. **Respetar White-Labeling**: La identidad visual, logos y nombres se configuran dinámicamente mediante `apps/mobile/app.config.ts` y `instances/` (en lugar de `app.json`), con soporte de marca en runtime vía la RPC pública `api_public_branding()` y los hooks `usePalette()` en mobile y variables CSS en web (`tailwind.config.js`, `apps/web/lib/branding.ts`, `apps/mobile/constants/brand.ts`). No cablear strings de marcas propietarias fijas en componentes reutilizables.
 5. **No introducir dependencias sin justificación**: Mantener el bundle liviano y compatible con las versiones fijadas en los `package.json`.
 6. **Validación obligatoria de cambios**: al modificar `apps/web`, correr `npm run build:web` o `npm run lint:web`; al modificar `apps/mobile`, correr `./node_modules/.bin/tsc --noEmit` dentro de `apps/mobile` o `npm run lint:mobile`. Informar el resultado real.
-7. **Comandos aislados por app**: usar siempre `--prefix apps/web` o `--prefix apps/mobile` (React 18 vs React 19), nunca instalar dependencias de una app desde la raíz.
+7. **Comandos aislados por app**: usar siempre `--prefix apps/web` o `--prefix apps/mobile` (ambas en React 19), nunca instalar dependencias de una app desde la raíz.
 8. **Consultar el esquema**: antes de tareas mayores que toquen datos, revisar `supabase/migrations/` y `supabase/README.md`.
 9. **Mobile en depósito**: priorizar alto contraste y bajo consumo de batería en `constants/theme.ts` y en las pantallas de picking.
 10. **Cambios de esquema**: Cambios de esquema = **nueva** migración con timestamp; nunca editar una migración ya aplicada. Validar los `.sql` y agregar tests pgTAP en `supabase/tests/`.

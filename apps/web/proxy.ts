@@ -8,7 +8,7 @@ export const config = {
 
 const PUBLIC_ROUTES = ['/login', '/reset', '/update-password', '/sin-acceso'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,

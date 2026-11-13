@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import OrderForm from '@/components/orders/OrderForm';
 
-export default function EditarPedidoPage({ params }: { params: { id: string } }) {
+export default function EditarPedidoPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -12,7 +13,7 @@ export default function EditarPedidoPage({ params }: { params: { id: string } })
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`/api/orders/${params.id}`, { cache: 'no-store' });
+        const res = await fetch(`/api/orders/${id}`, { cache: 'no-store' });
         if (!res.ok) {
           if (res.status === 404) throw new Error('Pedido no encontrado');
           throw new Error('No se pudo cargar el pedido');
@@ -26,7 +27,7 @@ export default function EditarPedidoPage({ params }: { params: { id: string } })
       }
     };
     load();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return (
