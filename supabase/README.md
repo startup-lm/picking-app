@@ -70,7 +70,7 @@ Guía paso a paso para configurar y desplegar la instancia de pruebas `pickflow-
 3. **Despliegue y configuración de URLs**:
    - Ejecutar el deploy inicial.
    - Una vez obtenida la URL pública de Netlify (ej. `https://<sitio>.netlify.app`), volver a Supabase (**Auth → URL Configuration**) y completar **Site URL** y **Redirect URLs** (`https://<sitio>/update-password`).
-4. **Nota sobre versión de Next.js (D-T8-3)**:
+4. **Nota sobre versión de Next.js**:
    - *Riesgo anotado, no resuelto*: Netlify avisó en mayo de 2026 que no planea parches de seguridad para Next.js 13.x/14.x y recomienda 15.x/16.x. Queda documentado como pendiente de actualización antes de salir a producción definitiva.
 
 ### 3. App Android (EAS)
@@ -202,6 +202,8 @@ npm run db:create-admin -- --email operador@local.test --role operator --name "O
 | `20261112000004_rpc.sql` | Funciones RPC transaccionales y atómicas para escaneo, finalización de picking/despacho, cambio de estado, carga masiva e informes. |
 | `20261112000005_storage.sql` | Creación del bucket privado `imports` en `storage.buckets` con políticas RLS de acceso exclusivo para administradores. |
 | `20261112000006_realtime.sql` | Publicación de `orders` y `order_lines` en `supabase_realtime` con identidad de réplica completa (`REPLICA IDENTITY FULL`). |
+| `20261113000007_profiles_email.sql` | Columna `email` en `profiles` y trigger de alta actualizado, para listar usuarios sin service role. |
+| `20261113000008_branding.sql` | RPC pública `api_public_branding()` (solo nombre, colores, logo y zona horaria) y bucket público `branding` con escritura solo admin. |
 
 ---
 
@@ -211,6 +213,7 @@ Todas las funciones RPC son `SECURITY DEFINER`, establecen `search_path = public
 
 | Función | Rol Mínimo | Descripción |
 |---|---|---|
+| `api_public_branding()` | Anon y autenticados | Marca de la instancia para login y apps. |
 | `api_scan(p_order_line_id, p_stage, p_kind, p_delta, p_client_event_id, p_code)` | Operador | Registra escaneo de bulto o unidad con bloqueo serializado `FOR UPDATE` a nivel pedido. Idempotente ante reintentos de red. Actualiza contadores y avanza pedido a `in_progress`. |
 | `api_find_line_by_code(p_order_id, p_code)` | Operador | Busca el producto y su línea correspondiente en el pedido mediante código de barra de bulto o unidad. |
 | `api_complete_picking(p_order_id)` | Operador | Valida que todas las líneas del pedido hayan completado su escaneo de picking (`package_scanned = package_total`, `unit_scanned = unit_total`) y transiciona el pedido a `assembled`. |
