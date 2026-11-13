@@ -6,7 +6,14 @@ import { validateCsvFile } from '@/lib/validators/file';
 import { processOrderCsv } from '@/lib/api/orders';
 import { useToast } from '@/hooks/useToast';
 
-type ProcessOk = { file: File; orderId: number; dispatchId: number; client: string; totalPkg: number; totalUnit: number };
+type ProcessOk = {
+  file: File;
+  orderId: number;
+  orderNumber: string;
+  customer: string;
+  totalPkg: number;
+  totalUnit: number;
+};
 type ProcessFail = { file: File; error: string };
 
 export default function CargarPedidoPage() {
@@ -72,8 +79,8 @@ export default function CargarPedidoPage() {
         oks.push({
           file: f,
           orderId: res.order_id,
-          dispatchId: res.dispatch_id,
-          client: res.client,
+          orderNumber: res.order_number,
+          customer: res.customer,
           totalPkg: res.totals.total_package,
           totalUnit: res.totals.total_unit,
         });
@@ -91,16 +98,16 @@ export default function CargarPedidoPage() {
         show({
           title: 'Pedido creado',
           description:
-            `Pedido #${o.orderId} · Despacho #${o.dispatchId}\n` +
-            `Cliente: ${o.client}\n` +
+            `Pedido ${o.orderNumber}\n` +
+            `Cliente: ${o.customer}\n` +
             `Bultos totales ${o.totalPkg} · Unidades totales ${o.totalUnit}`,
           variant: 'success',
         });
       } else {
         const detail = oks
           .map(o =>
-            `Pedido #${o.orderId} · Despacho #${o.dispatchId}\n` +
-            `Cliente: ${o.client}\n` +
+            `Pedido ${o.orderNumber}\n` +
+            `Cliente: ${o.customer}\n` +
             `Bultos totales ${o.totalPkg} · Unidades totales ${o.totalUnit}`
           )
           .join('\n\n');
@@ -114,8 +121,8 @@ export default function CargarPedidoPage() {
     } else if (oks.length && fails.length) {
       const okDetail = oks
         .map(o =>
-          `Pedido #${o.orderId} · Despacho #${o.dispatchId}\n` +
-          `Cliente: ${o.client}\n` +
+          `Pedido ${o.orderNumber}\n` +
+          `Cliente: ${o.customer}\n` +
           `Bultos totales ${o.totalPkg} · Unidades totales ${o.totalUnit}`
         )
         .join('\n\n');
@@ -136,14 +143,13 @@ export default function CargarPedidoPage() {
         description: failDetail || 'Revisá el formato de los CSV',
         variant: 'error',
       });
-      // Mantengo todos para que el usuario intente de nuevo o los quite manualmente
     }
 
     setBusy(false);
   };
 
   const selectedCount = files.length;
-  const progressText = useMemo(() => busy ? `Procesando ${progress.done}/${progress.total}…` : '', [busy, progress]);
+  const progressText = useMemo(() => (busy ? `Procesando ${progress.done}/${progress.total}…` : ''), [busy, progress]);
 
   return (
     <div className="mt-10 rounded-xl border border-border bg-bg px-4 py-10 max-w-5xl mx-auto">

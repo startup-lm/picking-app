@@ -1,8 +1,8 @@
 'use client';
 
-import { OrderLine } from "@/types/api";
+import type { ReportLine } from '@/types/rpc';
 
-export default function OrderLinesTable({ lines }: { lines: OrderLine[] }) {
+export default function OrderLinesTable({ lines }: { lines: ReportLine[] }) {
   if (!lines?.length) return <div className="text-sm text-muted mt-2">Sin líneas.</div>;
 
   return (
@@ -12,6 +12,7 @@ export default function OrderLinesTable({ lines }: { lines: OrderLine[] }) {
           <tr className="text-left text-muted">
             <th className="py-2 pr-4">Artículo</th>
             <th className="py-2 pr-4">Descripción</th>
+            <th className="py-2 pr-4">Ubicación</th>
             <th className="py-2 pr-4">Bultos</th>
             <th className="py-2 pr-4">Unidades</th>
             <th className="py-2 pr-4">Bultos escaneados</th>
@@ -20,9 +21,10 @@ export default function OrderLinesTable({ lines }: { lines: OrderLine[] }) {
         </thead>
         <tbody>
           {lines.map((li, idx) => (
-            <tr key={li.sku + '-' + idx} className="border-t border-border">
-              <td className="py-2 pr-4">{li.sku}</td>
-              <td className="py-2 pr-4">{li.description}</td>
+            <tr key={`${li.sku}-${idx}`} className="border-t border-border">
+              <td className="py-2 pr-4 font-mono">{li.sku}</td>
+              <td className="py-2 pr-4">{li.description || '-'}</td>
+              <td className="py-2 pr-4">{li.location || '-'}</td>
               <td className="py-2 pr-4">{li.package_total}</td>
               <td className="py-2 pr-4">{li.unit_total}</td>
               <td className="py-2 pr-4">{li.package_scanned}</td>

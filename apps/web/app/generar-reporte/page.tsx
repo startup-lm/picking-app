@@ -3,22 +3,25 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DayGroupView from '@/components/reports/DayGroup';
-import { DayGroup } from '@/types/api';
-import { fetchOrdersByDate, ordersCsvUrl } from '@/lib/api/reports';
+import type { ReportDay } from '@/types/rpc';
+import { fetchOrdersByDate, downloadOrdersCsv } from '@/lib/api/reports';
 import Modal from '@/components/ui/Modal';
-import { EstadoFiltro, matchEstadoFiltro } from '@/utils/report';
+import { type EstadoFiltro, matchEstadoFiltro } from '@/utils/report';
 
 export default function GenerarReportePage() {
   const router = useRouter();
   const [from, setFrom] = useState('');
-  const [to, setTo]     = useState('');
+  const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
-  const [groups, setGroups] = useState<DayGroup[] | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [groups, setGroups] = useState<ReportDay[] | null>(null);
 
-  const [modal, setModal] = useState<{open: boolean; title: string; message: string}>({
-    open: false, title: '', message: '',
+  const [modal, setModal] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: '',
+    message: '',
   });
-  const openModal  = (title: string, message: string) => setModal({ open: true, title, message });
+  const openModal = (title: string, message: string) => setModal({ open: true, title, message });
   const closeModal = () => setModal(m => ({ ...m, open: false }));
 
   // Filtro por estado (client-side)
@@ -27,9 +30,12 @@ export default function GenerarReportePage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!from || !to) {
-      const msg = !from && !to
-        ? 'Elegí fecha inicio y fin.'
-        : !from ? 'Elegí fecha de inicio.' : 'Elegí fecha de fin.';
+      const msg =
+        !from && !to
+          ? 'Elegí fecha inicio y fin.'
+          : !from
+          ? 'Elegí fecha de inicio.'
+          : 'Elegí fecha de fin.';
       openModal('Datos incompletos', msg);
       return;
     }
@@ -45,15 +51,25 @@ export default function GenerarReportePage() {
     }
   };
 
-  const exportHref = from && to ? ordersCsvUrl(from, to) : '#';
+  const onExportCsv = async () => {
+    if (!from || !to) return;
+    setExporting(true);
+    try {
+      await downloadOrdersCsv(from, to);
+    } catch (err: any) {
+      openModal('Error al exportar CSV', err?.message ?? 'No se pudo descargar el archivo CSV');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Aplico filtro en memoria
-  const filteredGroups: DayGroup[] | null = useMemo(() => {
+  const filteredGroups: ReportDay[] | null = useMemo(() => {
     if (!groups) return null;
     return groups
       .map(g => ({
         day: g.day,
-        orders: (g.orders ?? []).filter(o => matchEstadoFiltro(estado, o)),
+        orders: (g.orders ?? []).filter(o => matchEstadoFiltro(estado, o.status)),
       }))
       .filter(g => (g.orders?.length ?? 0) > 0);
   }, [groups, estado]);
@@ -123,36 +139,35 @@ export default function GenerarReportePage() {
           </button>
 
           {groups && (
-            <a
-              href={exportHref}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg border border-border bg-card px-6 py-2 font-semibold text-text hover:opacity-90"
+            <button
+              type="button"
+              onClick={onExportCsv}
+              disabled={exporting}
+              className="rounded-lg border border-border bg-card px-6 py-2 font-semibold text-text hover:opacity-90 disabled:opacity-60"
             >
-              Exportar CSV
-            </a>
+              {exporting ? 'Descargando…' : 'Exportar CSV'}
+            </button>
           )}
         </div>
       </form>
 
-      {/* Filtro de estado: debajo de los botones y a la derecha */}
-        {groups && (
-          <div className="mt-5 w-full flex justify-end">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted">Estado</label>
-              <select
-                value={estado}
-                onChange={(e) => setEstado(e.target.value as EstadoFiltro)}
-                className="rounded-lg border border-border bg-bgInput px-3 py-2 text-text outline-none"
-              >
-                <option value="todos">Todos</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="armado">Armado</option>
-                <option value="entregado">Entregado</option>
-              </select>
-            </div>
+      {/* Filtro de estado */}
+      {groups && (
+        <div className="mt-5 w-full flex justify-end">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted">Estado</label>
+            <select
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as EstadoFiltro)}
+              className="rounded-lg border border-border bg-bgInput px-3 py-2 text-text outline-none"
+            >
+              <option value="todos">Todos</option>
+              <option value="armado">Armado</option>
+              <option value="despachado">Despachado</option>
+            </select>
           </div>
-        )}
+        </div>
+      )}
 
       {filteredGroups && (
         <div className="mt-10 space-y-8">

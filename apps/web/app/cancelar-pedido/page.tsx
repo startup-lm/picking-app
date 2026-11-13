@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import PendingOrdersTable from '@/components/orders/PendingOrdersTable';
 import { cancelOrders, fetchPendingOrders } from '@/lib/api/orders';
 import { useToast } from '@/hooks/useToast';
-import { PendingOrder } from '@/types/api';
+import type { OrderSummary } from '@/types/api';
 import ConfirmCancelModal from '@/components/orders/ConfirmCancelModal';
 import CancelResultModal from '@/components/orders/CancelResultModal';
 
@@ -16,7 +16,7 @@ export default function CancelarPedidoPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const [raw, setRaw] = useState<PendingOrder[]>([]);
+  const [raw, setRaw] = useState<OrderSummary[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const [q, setQ] = useState('');
@@ -25,16 +25,23 @@ export default function CancelarPedidoPage() {
   // Modales
   const [openConfirm, setOpenConfirm] = useState(false);
   const [openResult, setOpenResult] = useState(false);
-  const [resultIds, setResultIds] = useState<number[]>([]);
+  const [resultCancelled, setResultCancelled] = useState<number[]>([]);
+  const [resultErrors, setResultErrors] = useState<
+    { id: number; order_number?: string; code: string; message: string }[]
+  >([]);
 
   const load = async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      const data = await fetchPendingOrders(); // no-store + cache buster
+      const data = await fetchPendingOrders();
       setRaw(data);
       setSelected(new Set());
     } catch (err: any) {
-      show({ title: 'Error', description: err?.message ?? 'No se pudo cargar la lista', variant: 'error' });
+      show({
+        title: 'Error',
+        description: err?.message ?? 'No se pudo cargar la lista',
+        variant: 'error',
+      });
     } finally {
       if (!opts?.silent) setLoading(false);
     }
@@ -47,7 +54,13 @@ export default function CancelarPedidoPage() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    let list = term ? raw.filter(o => (o.client ?? '').toLowerCase().includes(term)) : raw;
+    let list = term
+      ? raw.filter(
+          o =>
+            (o.customer ?? '').toLowerCase().includes(term) ||
+            (o.order_number ?? '').toLowerCase().includes(term)
+        )
+      : raw;
     list = [...list].sort((a, b) => {
       const da = Date.parse(a.created_at);
       const db = Date.parse(b.created_at);
@@ -56,7 +69,6 @@ export default function CancelarPedidoPage() {
     return list;
   }, [raw, q, sort]);
 
-  // Órdenes seleccionadas con id + cliente (para el modal)
   const selectedOrders = useMemo(
     () => filtered.filter(o => selected.has(o.id)),
     [filtered, selected]
@@ -84,20 +96,31 @@ export default function CancelarPedidoPage() {
     setOpenConfirm(true);
   };
 
-  const confirmCancel = async () => {
+  const confirmCancel = async (reason: string) => {
     const ids = selectedOrders.map(o => o.id);
     if (!ids.length) return;
 
     setBusy(true);
     try {
-      const res = await cancelOrders(ids);
+      const res = await cancelOrders(ids, reason);
       setOpenConfirm(false);
-      setResultIds(res.deleted_ids);
+      setResultCancelled(res.cancelled_ids);
+      const errMap = new Map(selectedOrders.map(o => [o.id, o.order_number]));
+      setResultErrors(
+        (res.errors || []).map(e => ({
+          ...e,
+          order_number: errMap.get(e.id),
+        }))
+      );
       setOpenResult(true);
-      await load({ silent: true }); // refresca lista desde server
+      await load({ silent: true });
     } catch (err: any) {
       setOpenConfirm(false);
-      show({ title: 'Error al cancelar', description: err?.message ?? 'Intentalo de nuevo', variant: 'error' });
+      show({
+        title: 'Error al cancelar',
+        description: err?.message ?? 'Intentalo de nuevo',
+        variant: 'error',
+      });
     } finally {
       setBusy(false);
     }
@@ -118,13 +141,18 @@ export default function CancelarPedidoPage() {
         open={openConfirm}
         onClose={() => setOpenConfirm(false)}
         onConfirm={confirmCancel}
-        orders={selectedOrders.map(o => ({ id: o.id, client: o.client ?? null }))}
+        orders={selectedOrders.map(o => ({
+          id: o.id,
+          order_number: o.order_number,
+          customer: o.customer || '-',
+        }))}
         busy={busy}
       />
       <CancelResultModal
         open={openResult}
         onClose={() => setOpenResult(false)}
-        deletedCount={resultIds.length}
+        cancelledCount={resultCancelled.length}
+        errors={resultErrors}
       />
 
       <div className="relative mb-6">
@@ -140,11 +168,11 @@ export default function CancelarPedidoPage() {
       {/* Filtros */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex-1">
-          <label className="mb-1 block text-sm text-muted">Buscar por cliente</label>
+          <label className="mb-1 block text-sm text-muted">Buscar por cliente o nro pedido</label>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Ej: ACME"
+            placeholder="Ej: ACME o PED-0001"
             className="w-full rounded-lg border border-border bg-bgInput px-3 py-2 text-text outline-none"
           />
         </div>

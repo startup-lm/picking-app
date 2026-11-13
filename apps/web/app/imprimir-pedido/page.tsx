@@ -4,22 +4,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/useToast';
 import { fetchAllOrders } from '@/lib/api/orders';
+import { authFetch, readError } from '@/lib/api/http';
 import PrintOrdersTable from '@/components/orders/PrintOrdersTable';
-
-
-type OrderRow = {
-  id: number;
-  client: string | null;
-  created_at: string;
-};
+import type { OrderSummary } from '@/types/api';
 
 export default function ImprimirPedidoPage() {
   const router = useRouter();
   const { show, ToastViewport } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [raw, setRaw] = useState<OrderRow[]>([]);
+  const [raw, setRaw] = useState<OrderSummary[]>([]);
 
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'asc' | 'desc'>('desc');
@@ -27,7 +21,7 @@ export default function ImprimirPedidoPage() {
   const load = async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      const data = await fetchAllOrders(); // cache: 'no-store'
+      const data = await fetchAllOrders();
       setRaw(data);
     } catch (err: any) {
       show({
@@ -47,7 +41,13 @@ export default function ImprimirPedidoPage() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    let list = term ? raw.filter(o => (o.client ?? '').toLowerCase().includes(term)) : raw;
+    let list = term
+      ? raw.filter(
+          o =>
+            (o.customer ?? '').toLowerCase().includes(term) ||
+            (o.order_number ?? '').toLowerCase().includes(term)
+        )
+      : raw;
     list = [...list].sort((a, b) => {
       const da = Date.parse(a.created_at);
       const db = Date.parse(b.created_at);
@@ -56,9 +56,28 @@ export default function ImprimirPedidoPage() {
     return list;
   }, [raw, q, sort]);
 
-  const onPrint = (orderId: number) => {
-    // abre una pestaña con el HTML del PDF y auto-dispara window.print()
-    window.open(`/api/orders/${orderId}/print`, '_blank', 'noopener,noreferrer');
+  const onPrint = async (orderId: number) => {
+    try {
+      const res = await authFetch(`/api/orders/${orderId}/print`);
+      if (!res.ok) {
+        const errorMsg = await readError(res);
+        show({
+          title: 'Error al imprimir',
+          description: errorMsg,
+          variant: 'error',
+        });
+        return;
+      }
+      const text = await res.text();
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/html' }));
+      window.open(url, '_blank');
+    } catch (err: any) {
+      show({
+        title: 'Error al imprimir',
+        description: err?.message ?? 'No se pudo generar la vista de impresión',
+        variant: 'error',
+      });
+    }
   };
 
   const infoText = useMemo(() => {
@@ -84,11 +103,11 @@ export default function ImprimirPedidoPage() {
       {/* Filtros */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex-1">
-          <label className="mb-1 block text-sm text-muted">Buscar por cliente</label>
+          <label className="mb-1 block text-sm text-muted">Buscar por cliente o nro pedido</label>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Ej: ACME"
+            placeholder="Ej: ACME o PED-0001"
             className="w-full rounded-lg border border-border bg-bgInput px-3 py-2 text-text outline-none"
           />
         </div>
@@ -108,7 +127,7 @@ export default function ImprimirPedidoPage() {
 
           <button
             onClick={() => load()}
-            disabled={loading || busy}
+            disabled={loading}
             className="h-10 self-end rounded-lg border border-border bg-card px-4 text-sm font-semibold hover:opacity-90 disabled:opacity-60"
           >
             Refrescar
@@ -116,10 +135,7 @@ export default function ImprimirPedidoPage() {
         </div>
       </div>
 
-      {/* Info */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="text-sm text-muted">{loading ? 'Cargando…' : infoText}</div>
-      </div>
+      <div className="mb-2 text-sm text-muted">{loading ? 'Cargando…' : infoText}</div>
 
       <div className="rounded-lg border border-border bg-card p-4">
         {loading ? (
