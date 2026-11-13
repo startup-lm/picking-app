@@ -77,7 +77,7 @@ const makeStyles = (p: Palette) =>
       shadowOffset: { width: 0, height: 4 },
       elevation: 4,
     },
-    btnCancelPressed: { backgroundColor: p.surfaceAlt },
+    btnCancelPressed: { backgroundColor: p.borderSoft, opacity: 0.85 },
     // default confirm button (now the bright variant)
     btnConfirm: { backgroundColor: p.accent },
     btnConfirmText: { color: p.onAccent, fontWeight: '500' },
@@ -89,6 +89,6 @@ const makeStyles = (p: Palette) =>
       shadowOffset: { width: 0, height: 8 },
       elevation: 10,
     },
-    // pressed state: swap to the lighter variant
-    btnConfirmPressed: { backgroundColor: p.accentSoft },
+    // pressed state
+    btnConfirmPressed: { backgroundColor: p.accent, opacity: 0.85 },
   });

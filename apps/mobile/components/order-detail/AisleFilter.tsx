@@ -79,9 +79,9 @@ const makeStyles = (p: Palette) =>
       paddingVertical: 6,
       paddingHorizontal: 10,
       borderRadius: 999,
-      backgroundColor: p.surfaceAlt,
+      backgroundColor: p.surface,
       borderWidth: 1,
-      borderColor: p.borderSoft,
+      borderColor: p.border,
     },
     pillActive: {
       backgroundColor: p.accentSoft,

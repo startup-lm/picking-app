@@ -143,7 +143,7 @@ export default function ScannerModal({
 
 const makeStyles = (p: Palette) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: p.background },
+    container: { flex: 1, backgroundColor: '#000000' }, // fondo de cámara, no es token de tema
     camera: { flex: 1 },
     center: { alignItems: 'center', justifyContent: 'center' },
     processingText: { color: p.onPrimary, opacity: 0.7 },
