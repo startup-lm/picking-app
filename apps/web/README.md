@@ -1,6 +1,6 @@
 # Pickflow Web
 
-Panel de control administrativo web de **Pickflow**, construido con Next.js 14 (App Router) y Tailwind CSS.
+Panel de control administrativo web de **Pickflow**, construido con Next.js 16 (React 19, App Router) y Tailwind CSS.
 
 ## Comandos
 
