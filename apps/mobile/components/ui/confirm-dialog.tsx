@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { ThemedText } from '../themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 
 type Props = {
   visible: boolean;
@@ -11,6 +14,9 @@ type Props = {
 };
 
 export default function ConfirmDialog({visible, message, confirmLabel = 'Confirmar',cancelLabel = 'Cancelar', onConfirm, onCancel, }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
@@ -46,42 +52,43 @@ export default function ConfirmDialog({visible, message, confirmLabel = 'Confirm
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%', borderRadius: 12, padding: 18,
-    backgroundColor: '#fff',
-    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
-    elevation: 6, alignItems: 'center', 
-  },
-  message: { fontSize: 22, lineHeight: 32, marginBottom: 36, textAlign: 'center', fontWeight: '500' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
-  btn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8 },
-  btnCancel: { backgroundColor: '#F3F4F6' },
-  btnCancelText: { color: '#111827', fontWeight: '400' },
-  btnCancelGlow: {
-    shadowColor: '#E5E7EB',
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  btnCancelPressed: { backgroundColor: '#E5E7EB' },
-  // default confirm button (now the bright variant)
-  btnConfirm: { backgroundColor: '#fee14dff' },
-  btnConfirmText: { color: '#111827', fontWeight: '500' },
-  // glow effect to make it stand out
-  btnGlow: {
-    shadowColor: '#fee14dff',
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
-  },
-  // pressed state: swap to the lighter variant
-  btnConfirmPressed: { backgroundColor: '#FFF7D6' },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.3)',
+      alignItems: 'center', justifyContent: 'center',
+      padding: 24,
+    },
+    card: {
+      width: '100%', borderRadius: 12, padding: 18,
+      backgroundColor: p.surface,
+      shadowColor: p.text, shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
+      elevation: 6, alignItems: 'center', 
+    },
+    message: { fontSize: 22, lineHeight: 32, marginBottom: 36, textAlign: 'center', fontWeight: '500', color: p.text },
+    actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+    btn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8 },
+    btnCancel: { backgroundColor: p.surfaceAlt },
+    btnCancelText: { color: p.text, fontWeight: '400' },
+    btnCancelGlow: {
+      shadowColor: p.borderSoft,
+      shadowOpacity: 0.5,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    btnCancelPressed: { backgroundColor: p.surfaceAlt },
+    // default confirm button (now the bright variant)
+    btnConfirm: { backgroundColor: p.accent },
+    btnConfirmText: { color: p.onAccent, fontWeight: '500' },
+    // glow effect to make it stand out
+    btnGlow: {
+      shadowColor: p.accent,
+      shadowOpacity: 0.45,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 10,
+    },
+    // pressed state: swap to the lighter variant
+    btnConfirmPressed: { backgroundColor: p.accentSoft },
+  });

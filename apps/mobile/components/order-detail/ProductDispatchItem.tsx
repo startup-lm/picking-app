@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 import type { Product, ProductDispatch } from '@/types/db';
 
 type Props = {
@@ -11,6 +13,8 @@ type Props = {
 };
 
 export default function ProductDispatchItem({ item, productMap, onLongPress }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const prod =
     productMap instanceof Map
       ? productMap.get(String(item.product_id))
@@ -20,7 +24,7 @@ export default function ProductDispatchItem({ item, productMap, onLongPress }: P
     <Pressable
       onLongPress={() => onLongPress?.(item)}
       delayLongPress={500}
-      android_ripple={{ color: '#E5E7EB' }}
+      android_ripple={{ color: palette.borderSoft }}
     >
       <ThemedView style={styles.row}>
         <ThemedText
@@ -45,18 +49,19 @@ export default function ProductDispatchItem({ item, productMap, onLongPress }: P
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-  },
-  title: { fontSize: 18, marginBottom: 4 },
-  noLocation: { opacity: 0.5, fontStyle: 'italic' },
-  sub: { opacity: 0.8 },
-  metaBox: { marginTop: 8, gap: 2 },
-  meta: { opacity: 0.9 },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    row: {
+      borderRadius: 8,
+      backgroundColor: p.surface,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+    },
+    title: { fontSize: 18, marginBottom: 4 },
+    noLocation: { opacity: 0.5, fontStyle: 'italic' },
+    sub: { opacity: 0.8 },
+    metaBox: { marginTop: 8, gap: 2 },
+    meta: { opacity: 0.9 },
+  });

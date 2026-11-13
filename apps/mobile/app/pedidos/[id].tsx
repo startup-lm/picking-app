@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 import SortTrigger from '@/components/order-detail/SortTrigger';
 import SortModal from '@/components/order-detail/SortModal';
 import AisleFilter from '@/components/order-detail/AisleFilter';
@@ -20,6 +22,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useOrderDetail } from '@/hooks/use-order-detail';
 
 export default function PedidoDetalleScreen() {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { id, client } = useLocalSearchParams<{ id: string; client: string }>();
   const orderId = String(id ?? '');
 
@@ -241,10 +245,7 @@ export default function PedidoDetalleScreen() {
       <Stack.Screen options={{ title: `Pedido #${orderId} - ${client}` }} />
 
       {/* FILTROS */}
-      <ThemedView style={{
-        backgroundColor: '#EFEFEF', borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14,
-        marginBottom: 4, borderWidth: 1, borderColor: '#E5E7EB'
-      }}>
+      <ThemedView style={styles.filterBox}>
         <SortTrigger sortKey={sortKey} sortDir={sortDir} onOpen={() => setSortOpen(true)} />
         <StatusFilter status={statusFilter} onChange={setStatusFilter} />
         <AisleFilter stats={aisleStats} selected={selectedAisle} onSelect={setSelectedAisle} />
@@ -289,3 +290,16 @@ export default function PedidoDetalleScreen() {
     </ThemedView>
   );
 }
+
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    filterBox: {
+      backgroundColor: p.surfaceAlt,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+    },
+  });

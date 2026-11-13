@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Dimensions, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 
 type Props = {
   visible: boolean;
@@ -23,6 +25,8 @@ export default function MenuOptions({
   onPrint,
   onCancel,
 }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
   const { height: H, width: W } = Dimensions.get('window');
   const showPrint = typeof onPrint === 'function';
 
@@ -61,7 +65,7 @@ export default function MenuOptions({
       <View style={[styles.menu, { top: pos.top, left: pos.left, width: MENU_W }]}>
         <Pressable
           style={styles.item}
-          android_ripple={{ color: '#E5E7EB' }}
+          android_ripple={{ color: palette.surfaceAlt }}
           onPress={() => { onClose(); onViewDetail(); }}
         >
           <ThemedText style={styles.itemText}>Ver detalle</ThemedText>
@@ -73,7 +77,7 @@ export default function MenuOptions({
           <>
             <Pressable
               style={styles.item}
-              android_ripple={{ color: '#E5E7EB' }}
+              android_ripple={{ color: palette.surfaceAlt }}
               onPress={() => { onClose(); onPrint!(); }}
             >
               <ThemedText style={styles.itemText}>Imprimir</ThemedText>
@@ -86,7 +90,7 @@ export default function MenuOptions({
 
         {/* Cancelar (si existe) */}
         {onCancel && (
-          <Pressable style={styles.item} android_ripple={{ color: '#E5E7EB' }}
+          <Pressable style={styles.item} android_ripple={{ color: palette.surfaceAlt }}
             onPress={() => { onClose(); onCancel(); }}>
             <ThemedText style={styles.itemText}>Cancelar</ThemedText>
           </Pressable>
@@ -96,32 +100,33 @@ export default function MenuOptions({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-    backgroundColor: 'transparent',
-  },
-  menu: {
-    position: 'absolute',
-    borderRadius: 14,
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  item: {
-    height: ITEM_H,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    backgroundColor: '#FFF',
-  },
-  itemText: { fontSize: 16 },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: '#484a4bff' },
-});
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    backdrop: {
+      position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+      backgroundColor: 'transparent',
+    },
+    menu: {
+      position: 'absolute',
+      borderRadius: 14,
+      backgroundColor: p.surface,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+      overflow: 'hidden',
+      elevation: 6,
+      shadowColor: p.text,
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    item: {
+      height: ITEM_H,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      backgroundColor: p.surface,
+    },
+    itemText: { fontSize: 16, color: p.text },
+    sep: { height: StyleSheet.hairlineWidth, backgroundColor: p.borderSoft },
+  });

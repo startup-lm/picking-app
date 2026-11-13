@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, type Palette } from '@/constants/theme';
 
 type AisleStat = { letter: string; total: number; pending: number };
 
@@ -11,6 +13,9 @@ type Props = {
 };
 
 export default function AisleFilter({ stats, selected, onSelect }: Props) {
+  const palette = Colors[useColorScheme() ?? 'light'];
+  const styles = useMemo(() => makeStyles(palette), [palette]);
+
   return (
     <View style={styles.row}>
       <ThemedText type="defaultSemiBold" style={styles.label}>
@@ -20,7 +25,7 @@ export default function AisleFilter({ stats, selected, onSelect }: Props) {
       <Pressable
         onPress={() => onSelect('ALL')}
         style={[styles.pill, selected === 'ALL' && styles.pillActive]}
-        android_ripple={{ color: '#ddd', borderless: false }}
+        android_ripple={{ color: palette.borderSoft, borderless: false }}
       >
         <ThemedText style={styles.pillText}>Todos</ThemedText>
       </Pressable>
@@ -39,7 +44,7 @@ export default function AisleFilter({ stats, selected, onSelect }: Props) {
                 active && styles.chipActive,
                 disabled && styles.chipDisabled,
               ]}
-              android_ripple={{ color: '#ddd', borderless: true }}
+              android_ripple={{ color: palette.borderSoft, borderless: true }}
             >
               <ThemedText
                 type="defaultSemiBold"
@@ -55,58 +60,59 @@ export default function AisleFilter({ stats, selected, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,             // igual que el de Estado
-    paddingTop: 8,
-  },
-  label: {
-    color: '#374151',
-    fontSize: 13,       // igual que el de Estado
-    marginRight: 4,
-  },
+const makeStyles = (p: Palette) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,             // igual que el de Estado
+      paddingTop: 8,
+    },
+    label: {
+      color: p.text,
+      fontSize: 13,       // igual que el de Estado
+      marginRight: 4,
+    },
 
-  // "Todos" como pill (mismo tamaño que Estado)
-  pill: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  pillActive: {
-    backgroundColor: '#FDE68A',
-    borderColor: '#1F2937',
-  },
-  pillText: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+    // "Todos" como pill (mismo tamaño que Estado)
+    pill: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 999,
+      backgroundColor: p.surfaceAlt,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+    },
+    pillActive: {
+      backgroundColor: p.accentSoft,
+      borderColor: p.accent,
+    },
+    pillText: {
+      color: p.text,
+      fontSize: 13,
+      fontWeight: '600',
+    },
 
-  // Letras A, B, C… con tamaño alineado al filtro de Estado
-  wrap: {
-    flexDirection: 'row',
-    gap: 6,             // igual que el de Estado
-    flexShrink: 1,
-    minWidth: 0,
-    flexWrap: 'wrap',
-  },
-  chip: {
-    width: 30,          // más chico para empatar visual
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { backgroundColor: '#FDE68A', borderColor: '#1F2937' },
-  chipDisabled: { opacity: 0.45 },
-  chipText: { fontSize: 13, color: '#111827', fontWeight: '600' },
-  chipTextDisabled: { color: '#9CA3AF' },
-});
+    // Letras A, B, C… con tamaño alineado al filtro de Estado
+    wrap: {
+      flexDirection: 'row',
+      gap: 6,             // igual que el de Estado
+      flexShrink: 1,
+      minWidth: 0,
+      flexWrap: 'wrap',
+    },
+    chip: {
+      width: 30,          // más chico para empatar visual
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: p.background,
+      borderWidth: 1,
+      borderColor: p.borderSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chipActive: { backgroundColor: p.accentSoft, borderColor: p.accent },
+    chipDisabled: { opacity: 0.45 },
+    chipText: { fontSize: 13, color: p.text, fontWeight: '600' },
+    chipTextDisabled: { color: p.textMuted },
+  });
