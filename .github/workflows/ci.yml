@@ -30,6 +30,9 @@ jobs:
       - name: Run Global Lint
         run: npm run lint
 
+      - name: Web Tests
+        run: npm run test:web
+
       - name: Mobile Typecheck
         run: cd apps/mobile && ./node_modules/.bin/tsc --noEmit
 

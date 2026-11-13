@@ -20,8 +20,14 @@ export function isHexColor(v: unknown): boolean {
 
 export function isTimezone(v: unknown): boolean {
   if (typeof v !== 'string' || !v.trim()) return false;
+  const tz = v.trim();
   try {
-    return Intl.supportedValuesOf('timeZone').includes(v.trim());
+    if (Intl.supportedValuesOf('timeZone').includes(tz)) {
+      return true;
+    }
+    // Also accept valid IANA aliases (e.g. America/Argentina/Buenos_Aires)
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
   } catch {
     return false;
   }
