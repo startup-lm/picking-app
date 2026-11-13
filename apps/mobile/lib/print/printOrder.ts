@@ -20,11 +20,13 @@ export async function generateOrderPdf(
       sueltas: l.unit_total,
     }))
     .sort((a, b) => {
-      const la = a.location ?? '';
-      const lb = a.location ?? '';
-      const locCmp = la.localeCompare(lb, 'es', { sensitivity: 'base' });
+      const la = (a.location ?? '').trim();
+      const lb = (b.location ?? '').trim();
+      if (!la && lb) return 1;
+      if (la && !lb) return -1;
+      const locCmp = la.localeCompare(lb, 'es', { numeric: true, sensitivity: 'base' });
       if (locCmp !== 0) return locCmp;
-      return a.sku.localeCompare(b.sku, 'es', { sensitivity: 'base' });
+      return a.sku.localeCompare(b.sku, 'es', { numeric: true, sensitivity: 'base' });
     });
 
   const opts: BuildOptions = { padRowsTo: 15, ...options };

@@ -57,31 +57,58 @@ export function filterAndSortRows(
 
   return [...filtered].sort((a, b) => {
     if (sortKey === 'location') {
-      const la = (a.location ?? '').toString();
-      const lb = (b.location ?? '').toString();
-      const c = la.localeCompare(lb, 'es', { sensitivity: 'base' });
+      const la = (a.location ?? '').trim();
+      const lb = (b.location ?? '').trim();
+      if (!la && lb) return 1;
+      if (la && !lb) return -1;
+      const c = la.localeCompare(lb, 'es', { numeric: true, sensitivity: 'base' });
       if (c !== 0) return c * dir;
 
       const sa = (a.product?.sku ?? '').toString();
       const sb = (b.product?.sku ?? '').toString();
-      const c2 = sa.localeCompare(sb, 'es', { sensitivity: 'base' });
+      const c2 = sa.localeCompare(sb, 'es', { numeric: true, sensitivity: 'base' });
       if (c2 !== 0) return c2 * dir;
 
       return (a.id - b.id) * dir;
     } else {
       const sa = (a.product?.sku ?? '').toString();
       const sb = (b.product?.sku ?? '').toString();
-      const c = sa.localeCompare(sb, 'es', { sensitivity: 'base' });
+      const c = sa.localeCompare(sb, 'es', { numeric: true, sensitivity: 'base' });
       if (c !== 0) return c * dir;
 
-      const la = (a.location ?? '').toString();
-      const lb = (b.location ?? '').toString();
-      const c2 = la.localeCompare(lb, 'es', { sensitivity: 'base' });
+      const la = (a.location ?? '').trim();
+      const lb = (b.location ?? '').trim();
+      if (!la && lb) return 1;
+      if (la && !lb) return -1;
+      const c2 = la.localeCompare(lb, 'es', { numeric: true, sensitivity: 'base' });
       if (c2 !== 0) return c2 * dir;
 
       return (a.id - b.id) * dir;
     }
   });
+}
+
+export function nextLine(lines: OrderDetailLine[], stage: Stage): OrderDetailLine | null {
+  const pending = lines.filter((r) => !isLineComplete(r, stage));
+  if (pending.length === 0) return null;
+
+  return (
+    [...pending].sort((a, b) => {
+      const la = (a.location ?? '').trim();
+      const lb = (b.location ?? '').trim();
+      if (!la && lb) return 1;
+      if (la && !lb) return -1;
+      const c = la.localeCompare(lb, 'es', { numeric: true, sensitivity: 'base' });
+      if (c !== 0) return c;
+
+      const sa = (a.product?.sku ?? '').toString();
+      const sb = (b.product?.sku ?? '').toString();
+      const c2 = sa.localeCompare(sb, 'es', { numeric: true, sensitivity: 'base' });
+      if (c2 !== 0) return c2;
+
+      return a.id - b.id;
+    })[0] ?? null
+  );
 }
 
 export function getPendientes(rows: OrderDetailLine[], stage: Stage) {
