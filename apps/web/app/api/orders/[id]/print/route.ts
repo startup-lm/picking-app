@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { getUserClient, jsonError, rpcErrorResponse } from '@/lib/supabase/route';
+import { requireUser } from '@/lib/auth/require-user';
+import { jsonError, rpcErrorResponse } from '@/lib/api/responses';
 
 export const runtime = 'nodejs';
 
@@ -133,11 +134,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const db = getUserClient(req);
-  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+  const auth = await requireUser('admin');
+  if (!auth.ok) return auth.response;
+  const db = auth.supabase;
 
-  const id = Number(params.id);
-  if (!Number.isFinite(id) || id <= 0) return jsonError(400, 'invalid_argument', 'ID inválido');
+  const id = Number(params?.id);
+  if (!Number.isInteger(id) || id <= 0) return jsonError(400, 'invalid_argument', 'ID inválido');
 
   const { data: order, error } = await db
     .from('orders')

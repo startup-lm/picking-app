@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserClient, jsonError } from '@/lib/supabase/route';
+import { requireUser } from '@/lib/auth/require-user';
+import { jsonError } from '@/lib/api/responses';
 import { errorMessage } from '@/lib/errors';
+import { isPositiveIntArray, nonEmptyString } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  const db = getUserClient(req);
-  if (!db) return jsonError(401, 'unauthorized', 'Sesión requerida');
+  const auth = await requireUser('admin');
+  if (!auth.ok) return auth.response;
+  const db = auth.supabase;
 
   const body = await req.json().catch(() => ({}));
   const ids = body?.ids;
   const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
 
-  const isValidIds =
-    Array.isArray(ids) &&
-    ids.length > 0 &&
-    ids.length <= 100 &&
-    ids.every(id => typeof id === 'number' && Number.isInteger(id) && id > 0);
-
-  if (!isValidIds || !reason || reason.length > 500) {
+  if (!isPositiveIntArray(ids, 100) || !nonEmptyString(reason, 500)) {
     return jsonError(400, 'invalid_argument', 'Datos inválidos para cancelar pedidos');
   }
 
