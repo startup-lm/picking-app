@@ -34,7 +34,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.TAG_NAME }}
-          name: PickingApp ${{ steps.tag.outputs.TAG_NAME }}
+          name: Pickflow ${{ steps.tag.outputs.TAG_NAME }}
           body_path: ${{ steps.notes.outputs.path }}
           draft: false
           prerelease: false

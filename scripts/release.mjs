@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * 🚀 PickingApp Monorepo Unified Release Script
+ * 🚀 Pickflow Monorepo Unified Release Script
  *
  * Sincroniza versiones en:
  *  - package.json (raíz)
@@ -95,7 +95,7 @@ function updateChangelog(newVersion, today) {
     console.warn('⚠️ CHANGELOG.md no encontrado, se creará uno nuevo.');
     fs.writeFileSync(
       PATHS.changelog,
-      `# Changelog\n\nTodos los cambios notables de este proyecto se documentan en este archivo.\n\n## [${newVersion}] - ${today}\n\n### Added\n- Release unificada de PickingApp v${newVersion}.\n`,
+      `# Changelog\n\nTodos los cambios notables de este proyecto se documentan en este archivo.\n\n## [${newVersion}] - ${today}\n\n### Added\n- Release unificada de Pickflow v${newVersion}.\n`,
       'utf-8'
     );
     return;
@@ -130,7 +130,7 @@ function updateChangelog(newVersion, today) {
   }
 
   const releaseNoteFile = path.join(PATHS.releasesDir, `RELEASE_v${newVersion}.md`);
-  const releaseNoteContent = `# PickingApp v${newVersion} (${today})\n\n${unreleasedNotes}\n\n---\n*Generado automáticamente por el script de release de PickingApp.*`;
+  const releaseNoteContent = `# Pickflow v${newVersion} (${today})\n\n${unreleasedNotes}\n\n---\n*Generado automáticamente por el script de release de Pickflow.*`;
 
   if (!isDryRun) {
     fs.writeFileSync(releaseNoteFile, releaseNoteContent, 'utf-8');
@@ -139,7 +139,7 @@ function updateChangelog(newVersion, today) {
 }
 
 async function run() {
-  console.log('📦 PickingApp - Monorepo Release Tool');
+  console.log('📦 Pickflow - Monorepo Release Tool');
   console.log('====================================');
 
   // Leer versiones actuales

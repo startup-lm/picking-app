@@ -3,10 +3,11 @@ import './globals.css';
 import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import SessionExpiryWatcher from '@/components/auth/SessionExpiryWatcher';
+import { APP_NAME } from '@/lib/brand';
 
 export const metadata: Metadata = {
-  title: 'Admin LEGO',
-  description: 'Mini admin con login, carga y cancelacion de pedidos. Generacion de reportes.',
+  title: APP_NAME,
+  description: 'Preparación y despacho de pedidos',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
