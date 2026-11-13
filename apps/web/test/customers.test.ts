@@ -63,7 +63,7 @@ describe('Customers API', () => {
       const req = new NextRequest('http://localhost/api/customers?q=ferre_1(10%,20)');
       await getCustomers(req);
 
-      expect(orArg).toContain('ferre\\_1\\(10\\%\\,20\\)');
+      expect(orArg).toContain('ferre\\_1 10\\% 20');
     });
   });
 

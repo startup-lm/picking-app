@@ -65,7 +65,7 @@ describe('Products API', () => {
       const req = new NextRequest('http://localhost/api/products?q=item_1(10%,20)');
       await getProducts(req);
 
-      expect(orArg).toContain('item\\_1\\(10\\%\\,20\\)');
+      expect(orArg).toContain('item\\_1 10\\% 20');
     });
   });
 

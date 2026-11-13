@@ -1,7 +1,8 @@
 /**
- * Escapes PostgREST special characters for filter expressions and ILIKE patterns:
- * %, _, ,, (, )
+ * Normalizes and escapes search terms for PostgREST .or() filter expressions:
+ * Replaces reserved delimiters (`,`, `(`, `)`, `"`) with a space,
+ * and escapes SQL LIKE wildcard characters (`\`, `%`, `_`).
  */
 export function escapePostgrestFilter(str: string): string {
-  return str.replace(/([%_,()])/g, '\\$1');
+  return str.replace(/[,()"]/g, ' ').replace(/[\\%_]/g, '\\$&');
 }
