@@ -71,8 +71,10 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  -- Validación de argumentos
-  IF p_stage NOT IN ('picking', 'dispatch')
+  -- Validación de argumentos (incluyendo chequeo explícito de nulls en stage y kind)
+  IF p_stage IS NULL
+     OR p_kind IS NULL
+     OR p_stage NOT IN ('picking', 'dispatch')
      OR p_kind NOT IN ('unit', 'package')
      OR p_delta IS NULL
      OR p_delta = 0
@@ -489,52 +491,52 @@ BEGIN
   v_customer_name := pf_blank(p_order->>'customer_name');
   IF v_customer_id_raw IS NOT NULL THEN
     IF NOT EXISTS (SELECT 1 FROM customers WHERE id = v_customer_id_raw) THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'missing_customer' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'missing_customer', ERRCODE = 'P0001';
     END IF;
     v_customer_id := v_customer_id_raw;
   ELSIF v_customer_name IS NOT NULL THEN
     v_customer_id := pf_customer_id(v_customer_name);
   ELSE
-    RAISE EXCEPTION 'invalid_order' DETAIL 'missing_customer' USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'invalid_order' USING DETAIL = 'missing_customer', ERRCODE = 'P0001';
   END IF;
 
   -- Regla 2: Líneas
   v_lines := p_order->'lines';
   IF v_lines IS NULL OR jsonb_typeof(v_lines) <> 'array' OR jsonb_array_length(v_lines) = 0 THEN
-    RAISE EXCEPTION 'invalid_order' DETAIL 'no_lines' USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'invalid_order' USING DETAIL = 'no_lines', ERRCODE = 'P0001';
   END IF;
 
   FOR v_line_elem IN SELECT * FROM jsonb_array_elements(v_lines)
   LOOP
     v_pid := pf_int(v_line_elem->>'product_id');
     IF v_pid IS NULL THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'inactive_product' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'inactive_product', ERRCODE = 'P0001';
     END IF;
 
     -- Unicidad de producto en el pedido
     IF v_pid = ANY(v_seen_pids) THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'duplicate_product' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'duplicate_product', ERRCODE = 'P0001';
     END IF;
     v_seen_pids := v_seen_pids || v_pid;
 
     -- Cantidades
     IF v_line_elem ? 'package_total' AND pf_blank(v_line_elem->>'package_total') IS NOT NULL AND pf_int(v_line_elem->>'package_total') IS NULL THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'invalid_quantity' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'invalid_quantity', ERRCODE = 'P0001';
     END IF;
     IF v_line_elem ? 'unit_total' AND pf_blank(v_line_elem->>'unit_total') IS NOT NULL AND pf_int(v_line_elem->>'unit_total') IS NULL THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'invalid_quantity' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'invalid_quantity', ERRCODE = 'P0001';
     END IF;
 
     v_pkg := COALESCE(pf_int(v_line_elem->>'package_total'), 0);
     v_unt := COALESCE(pf_int(v_line_elem->>'unit_total'), 0);
     IF v_pkg < 0 OR v_unt < 0 OR (v_pkg + v_unt = 0) THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'invalid_quantity' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'invalid_quantity', ERRCODE = 'P0001';
     END IF;
 
     -- Producto existente y activo
     SELECT location, is_active INTO v_loc, v_is_active FROM products WHERE id = v_pid;
     IF NOT FOUND OR NOT v_is_active THEN
-      RAISE EXCEPTION 'invalid_order' DETAIL 'inactive_product' USING ERRCODE = 'P0001';
+      RAISE EXCEPTION 'invalid_order' USING DETAIL = 'inactive_product', ERRCODE = 'P0001';
     END IF;
 
     v_valid_lines := v_valid_lines || jsonb_build_object(
@@ -545,7 +547,7 @@ BEGIN
     );
   END LOOP;
 
-  v_release := COALESCE((p_order->>'release')::boolean, false);
+  v_release := CASE WHEN jsonb_typeof(p_order->'release') = 'boolean' THEN (p_order->'release')::boolean ELSE false END;
   v_id := pf_int(p_order->>'id');
   v_notes := pf_blank(p_order->>'notes');
 
@@ -554,7 +556,7 @@ BEGIN
     v_order_number := pf_blank(p_order->>'order_number');
     IF v_order_number IS NOT NULL THEN
       IF EXISTS (SELECT 1 FROM orders WHERE order_number = v_order_number) THEN
-        RAISE EXCEPTION 'invalid_order' DETAIL 'order_number_taken' USING ERRCODE = 'P0001';
+        RAISE EXCEPTION 'invalid_order' USING DETAIL = 'order_number_taken', ERRCODE = 'P0001';
       END IF;
     ELSE
       v_order_number := next_order_number();
@@ -586,7 +588,7 @@ BEGIN
     v_order_number := pf_blank(p_order->>'order_number');
     IF v_order_number IS NOT NULL AND v_order_number <> v_existing_order.order_number THEN
       IF EXISTS (SELECT 1 FROM orders WHERE order_number = v_order_number AND id <> v_id) THEN
-        RAISE EXCEPTION 'invalid_order' DETAIL 'order_number_taken' USING ERRCODE = 'P0001';
+        RAISE EXCEPTION 'invalid_order' USING DETAIL = 'order_number_taken', ERRCODE = 'P0001';
       END IF;
     ELSE
       v_order_number := v_existing_order.order_number;
@@ -677,7 +679,7 @@ BEGIN
     FOR r IN
       SELECT *
       FROM jsonb_to_recordset(p_rows) AS x(
-        row int,
+        "row" int,
         sku text,
         description text,
         unit_barcode text,
@@ -685,20 +687,20 @@ BEGIN
         units_per_package text,
         location text
       )
-      ORDER BY row
+      ORDER BY "row"
     LOOP
       v_row_errors := '[]'::jsonb;
       v_sku := pf_blank(r.sku);
 
       -- Paso 1: SKU obligatorio
       IF v_sku IS NULL THEN
-        v_errors := v_errors || jsonb_build_object('row', r.row, 'code', 'missing_sku');
+        v_errors := v_errors || jsonb_build_object('row', r."row", 'code', 'missing_sku');
         CONTINUE;
       END IF;
 
       -- Paso 2: SKU duplicado en archivo
       IF v_sku = ANY(v_seen_skus) THEN
-        v_errors := v_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'duplicate_sku_in_file');
+        v_errors := v_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'duplicate_sku_in_file');
         CONTINUE;
       END IF;
       v_seen_skus := v_seen_skus || v_sku;
@@ -709,7 +711,7 @@ BEGIN
       IF v_upp_raw IS NOT NULL THEN
         v_upp_int := pf_int(v_upp_raw);
         IF v_upp_int IS NULL OR v_upp_int <= 0 THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'invalid_units_per_package', 'field', 'units_per_package');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'invalid_units_per_package', 'field', 'units_per_package');
         END IF;
       END IF;
 
@@ -725,42 +727,42 @@ BEGIN
 
       IF NOT v_exists THEN
         IF v_final_desc IS NULL THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'missing_description', 'field', 'description');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'missing_description', 'field', 'description');
         END IF;
         IF v_final_unit_bc IS NULL AND v_final_pkg_bc IS NULL THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'missing_barcode');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'missing_barcode');
         END IF;
       END IF;
 
       -- Paso 5: Mismo código unit y package
       IF v_final_unit_bc IS NOT NULL AND v_final_pkg_bc IS NOT NULL AND v_final_unit_bc = v_final_pkg_bc THEN
-        v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'same_barcode');
+        v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'same_barcode');
       END IF;
 
       -- Paso 6: Unicidad de códigos
       IF v_final_unit_bc IS NOT NULL THEN
         IF v_file_barcodes ? v_final_unit_bc AND v_file_barcodes->>v_final_unit_bc <> v_sku THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'duplicate_barcode_in_file', 'field', 'unit_barcode');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'duplicate_barcode_in_file', 'field', 'unit_barcode');
         END IF;
         IF EXISTS (
           SELECT 1 FROM product_barcodes pb
           WHERE pb.code = v_final_unit_bc
             AND (NOT v_exists OR pb.product_id <> v_prod.id)
         ) THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'barcode_in_use', 'field', 'unit_barcode');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'barcode_in_use', 'field', 'unit_barcode');
         END IF;
       END IF;
 
       IF v_final_pkg_bc IS NOT NULL THEN
         IF v_file_barcodes ? v_final_pkg_bc AND v_file_barcodes->>v_final_pkg_bc <> v_sku THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'duplicate_barcode_in_file', 'field', 'package_barcode');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'duplicate_barcode_in_file', 'field', 'package_barcode');
         END IF;
         IF EXISTS (
           SELECT 1 FROM product_barcodes pb
           WHERE pb.code = v_final_pkg_bc
             AND (NOT v_exists OR pb.product_id <> v_prod.id)
         ) THEN
-          v_row_errors := v_row_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'barcode_in_use', 'field', 'package_barcode');
+          v_row_errors := v_row_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'barcode_in_use', 'field', 'package_barcode');
         END IF;
       END IF;
 
@@ -796,7 +798,7 @@ BEGIN
           v_created := v_created + 1;
         END IF;
       EXCEPTION WHEN unique_violation THEN
-        v_errors := v_errors || jsonb_build_object('row', r.row, 'sku', v_sku, 'code', 'barcode_in_use');
+        v_errors := v_errors || jsonb_build_object('row', r."row", 'sku', v_sku, 'code', 'barcode_in_use');
       END;
     END LOOP;
 
@@ -838,7 +840,8 @@ DECLARE
   v_errors jsonb := '[]'::jsonb;
   v_warnings jsonb := '[]'::jsonb;
 
-  v_distinct_orders text[] := '{}';
+  v_groups jsonb;
+  v_group jsonb;
   v_order_num text;
   v_first_row int;
 
@@ -864,7 +867,6 @@ DECLARE
   v_final_unt int;
 
   -- Variables para consolidar líneas del pedido actual
-  -- jsonb array de objetos: { "sku", "product_id", "location", "packages", "units" }
   v_order_lines jsonb;
   v_line_idx int;
   v_found_idx int;
@@ -887,11 +889,23 @@ BEGIN
   END IF;
 
   BEGIN
-    -- 1. Identificar filas sin order_number y agrupar los números válidos en orden de aparición
+    -- 1. Identificar filas sin order_number (una sola pasada)
     FOR r IN
-      SELECT *
+      SELECT x."row"
+      FROM jsonb_to_recordset(p_rows) AS x("row" int, order_number text)
+      WHERE pf_blank(x.order_number) IS NULL
+      ORDER BY x."row"
+    LOOP
+      v_errors := v_errors || jsonb_build_object('row', r."row", 'code', 'missing_order_number');
+    END LOOP;
+
+    -- 2. Agrupar p_rows una sola vez (O(filas) en lugar de O(pedidos * filas))
+    SELECT COALESCE(jsonb_agg(to_jsonb(g) ORDER BY g.first_row), '[]'::jsonb) INTO v_groups
+    FROM (
+      SELECT pf_blank(x.order_number) AS order_number, min(x."row") AS first_row,
+             jsonb_agg(to_jsonb(x) ORDER BY x."row") AS rows
       FROM jsonb_to_recordset(p_rows) AS x(
-        row int,
+        "row" int,
         order_number text,
         customer text,
         sku text,
@@ -902,19 +916,15 @@ BEGIN
         priority text,
         notes text
       )
-      ORDER BY row
-    LOOP
-      v_order_num := pf_blank(r.order_number);
-      IF v_order_num IS NULL THEN
-        v_errors := v_errors || jsonb_build_object('row', r.row, 'code', 'missing_order_number');
-      ELSIF NOT (v_order_num = ANY(v_distinct_orders)) THEN
-        v_distinct_orders := v_distinct_orders || v_order_num;
-      END IF;
-    END LOOP;
+      WHERE pf_blank(x.order_number) IS NOT NULL
+      GROUP BY 1
+    ) g;
 
-    -- 2. Procesar cada pedido
-    FOREACH v_order_num IN ARRAY v_distinct_orders
+    -- 3. Procesar cada grupo de pedido
+    FOR v_group IN SELECT value FROM jsonb_array_elements(v_groups)
     LOOP
+      v_order_num := v_group->>'order_number';
+      v_first_row := (v_group->>'first_row')::int;
       v_order_has_error := false;
       v_order_lines := '[]'::jsonb;
       v_cust_name := NULL;
@@ -924,24 +934,17 @@ BEGIN
       v_priority := 'normal';
       v_notes := NULL;
 
-      -- Obtener primera fila para reportes de cabecera
-      SELECT row INTO v_first_row
-      FROM jsonb_to_recordset(p_rows) AS x(row int, order_number text)
-      WHERE pf_blank(order_number) = v_order_num
-      ORDER BY row
-      LIMIT 1;
-
       -- Verificar si el order_number ya existe en orders
       IF EXISTS (SELECT 1 FROM orders WHERE order_number = v_order_num) THEN
         v_errors := v_errors || jsonb_build_object('row', v_first_row, 'order_number', v_order_num, 'code', 'order_exists');
         v_order_has_error := true;
       END IF;
 
-      -- Obtener atributos de cabecera del pedido (primer valor no vacío del grupo)
+      -- Obtener atributos de cabecera a partir del grupo
       SELECT pf_blank(customer) INTO v_cust_name
-      FROM jsonb_to_recordset(p_rows) AS x(row int, order_number text, customer text)
-      WHERE pf_blank(order_number) = v_order_num AND pf_blank(customer) IS NOT NULL
-      ORDER BY row LIMIT 1;
+      FROM jsonb_to_recordset(v_group->'rows') AS x(customer text)
+      WHERE pf_blank(customer) IS NOT NULL
+      LIMIT 1;
 
       IF v_cust_name IS NULL THEN
         v_errors := v_errors || jsonb_build_object('row', v_first_row, 'order_number', v_order_num, 'code', 'missing_customer');
@@ -949,9 +952,9 @@ BEGIN
       END IF;
 
       SELECT pf_blank(due_date) INTO v_due_date_str
-      FROM jsonb_to_recordset(p_rows) AS x(row int, order_number text, due_date text)
-      WHERE pf_blank(order_number) = v_order_num AND pf_blank(due_date) IS NOT NULL
-      ORDER BY row LIMIT 1;
+      FROM jsonb_to_recordset(v_group->'rows') AS x(due_date text)
+      WHERE pf_blank(due_date) IS NOT NULL
+      LIMIT 1;
 
       IF v_due_date_str IS NOT NULL THEN
         IF v_due_date_str !~ '^\d{4}-\d{2}-\d{2}$' THEN
@@ -968,9 +971,9 @@ BEGIN
       END IF;
 
       SELECT pf_blank(priority) INTO v_priority_str
-      FROM jsonb_to_recordset(p_rows) AS x(row int, order_number text, priority text)
-      WHERE pf_blank(order_number) = v_order_num AND pf_blank(priority) IS NOT NULL
-      ORDER BY row LIMIT 1;
+      FROM jsonb_to_recordset(v_group->'rows') AS x(priority text)
+      WHERE pf_blank(priority) IS NOT NULL
+      LIMIT 1;
 
       IF v_priority_str IS NOT NULL THEN
         IF v_priority_str NOT IN ('normal', 'urgent') THEN
@@ -982,37 +985,35 @@ BEGIN
       END IF;
 
       SELECT pf_blank(notes) INTO v_notes
-      FROM jsonb_to_recordset(p_rows) AS x(row int, order_number text, notes text)
-      WHERE pf_blank(order_number) = v_order_num AND pf_blank(notes) IS NOT NULL
-      ORDER BY row LIMIT 1;
+      FROM jsonb_to_recordset(v_group->'rows') AS x(notes text)
+      WHERE pf_blank(notes) IS NOT NULL
+      LIMIT 1;
 
-      -- Validar líneas del pedido
+      -- Validar líneas del pedido actual
       FOR r IN
         SELECT *
-        FROM jsonb_to_recordset(p_rows) AS x(
-          row int,
-          order_number text,
+        FROM jsonb_to_recordset(v_group->'rows') AS x(
+          "row" int,
           sku text,
           packages text,
           units text,
           quantity text
         )
-        WHERE pf_blank(order_number) = v_order_num
-        ORDER BY row
+        ORDER BY "row"
       LOOP
         v_sku := pf_blank(r.sku);
         IF v_sku IS NULL THEN
-          v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'unknown_sku', 'sku', '');
+          v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'unknown_sku', 'sku', '');
           v_order_has_error := true;
           CONTINUE;
         END IF;
 
         SELECT * INTO v_prod FROM products WHERE sku = v_sku;
         IF NOT FOUND THEN
-          v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'unknown_sku', 'sku', v_sku);
+          v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'unknown_sku', 'sku', v_sku);
           v_order_has_error := true;
         ELSIF NOT v_prod.is_active THEN
-          v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'inactive_sku', 'sku', v_sku);
+          v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'inactive_sku', 'sku', v_sku);
           v_order_has_error := true;
         END IF;
 
@@ -1030,7 +1031,7 @@ BEGIN
              OR v_pkg_val < 0
              OR v_unt_val < 0
              OR (v_pkg_val + v_unt_val = 0) THEN
-            v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'invalid_quantity');
+            v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'invalid_quantity');
             v_order_has_error := true;
           ELSE
             v_final_pkg := v_pkg_val;
@@ -1040,20 +1041,20 @@ BEGIN
         ELSIF v_qty_raw IS NOT NULL THEN
           v_qty_val := pf_int(v_qty_raw);
           IF v_qty_val IS NULL OR v_qty_val <= 0 THEN
-            v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'invalid_quantity');
+            v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'invalid_quantity');
             v_order_has_error := true;
           ELSE
             IF v_prod.id IS NOT NULL THEN
               v_final_pkg := v_qty_val / v_prod.units_per_package;
               v_final_unt := v_qty_val % v_prod.units_per_package;
               IF (v_final_pkg + v_final_unt = 0) THEN
-                v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'invalid_quantity');
+                v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'invalid_quantity');
                 v_order_has_error := true;
               END IF;
             END IF;
           END IF;
         ELSE
-          v_errors := v_errors || jsonb_build_object('row', r.row, 'order_number', v_order_num, 'code', 'missing_quantity');
+          v_errors := v_errors || jsonb_build_object('row', r."row", 'order_number', v_order_num, 'code', 'missing_quantity');
           v_order_has_error := true;
         END IF;
 
@@ -1087,7 +1088,7 @@ BEGIN
             );
 
             v_warnings := v_warnings || jsonb_build_object(
-              'row', r.row,
+              'row', r."row",
               'order_number', v_order_num,
               'code', 'duplicate_sku_merged',
               'sku', v_sku
@@ -1104,7 +1105,7 @@ BEGIN
         END IF;
       END LOOP;
 
-      -- 3. Si no hubo errores, insertar pedido y líneas
+      -- 4. Si no hubo errores, insertar pedido y líneas
       IF NOT v_order_has_error THEN
         BEGIN
           v_cust_id := pf_customer_id(v_cust_name);
@@ -1147,7 +1148,7 @@ BEGIN
       END IF;
     END LOOP;
 
-    -- 4. Patrón PFDRY para dry run
+    -- 5. Patrón PFDRY para dry run
     IF p_dry_run THEN
       RAISE EXCEPTION USING ERRCODE = 'PFDRY';
     END IF;
@@ -1164,7 +1165,7 @@ BEGIN
     'warnings', v_warnings
   );
 
-  -- 5. Actualizar resumen en tabla imports si no es dry run
+  -- 6. Actualizar resumen en tabla imports si no es dry run
   IF NOT p_dry_run AND p_import_id IS NOT NULL THEN
     UPDATE imports SET summary = v_result WHERE id = p_import_id;
   END IF;
