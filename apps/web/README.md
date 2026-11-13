@@ -1,20 +1,22 @@
-# Next + Supabase (solo @supabase/supabase-js)
+# Pickflow Web
 
-## Setup
-1. `cp .env.example .env.local` y setear:
-   - NEXT_PUBLIC_SUPABASE_URL
-   - NEXT_PUBLIC_SUPABASE_ANON_KEY
-2. `npm i`
-3. `npm run dev`
+Panel de control administrativo web de **Pickflow**, construido con Next.js 14 (App Router) y Tailwind CSS.
 
-## Login
-- /login usa `supabase.auth.signInWithPassword`.
-- /upload verifica sesión en el **cliente** y redirige a /login si no hay sesión.
-- Para mayor seguridad: políticas RLS que **solo** permitan escribir a `role=admin` en `app_metadata`.
+## Comandos
 
-## Import
-- /upload parsea Excel en el navegador con `xlsx` y hace `upsert` a `products`.
-- Ajustá `onConflict: 'sku'` a tu unique key.
+```bash
+# Instalar dependencias
+npm ci
 
-## Notas
-- Este setup evita helpers/SSR. Si luego querés SSR/edge con cookies en servidor, se puede migrar, pero no es estrictamente necesario para este mini admin.
+# Servidor de desarrollo (puerto 3000)
+npm run dev
+
+# Compilar para producción
+npm run build
+
+# Iniciar en producción
+npm start
+
+# Linting
+npm run lint
+```

@@ -1,4 +1,4 @@
-# 📦 PickingApp - Guía y Reglas para Agentes de IA (AGENTS.md)
+# 📦 Pickflow - Guía y Reglas para Agentes de IA (AGENTS.md)
 
 Este documento define la arquitectura, convenciones, comandos operativos y estándares de desarrollo para cualquier Agente de IA (Antigravity, Cursor, Claude Code, Copilot, etc.) que opere en este repositorio.
 
@@ -6,7 +6,7 @@ Este documento define la arquitectura, convenciones, comandos operativos y está
 
 ## 1. Visión General del Proyecto
 
-**PickingApp** es una suite SaaS monorepo orientada a operaciones de logística y preparación de pedidos en depósitos (WMS / Fulfillment).
+**Pickflow** es una suite SaaS monorepo orientada a operaciones de logística y preparación de pedidos en depósitos (WMS / Fulfillment).
 Permite gestionar la carga masiva de pedidos por CSV/Excel, el catálogo de productos con códigos de barra de bulto y unidad, la preparación física en depósito mediante terminal móvil con escáner de cámara, y el despacho/remito final.
 
 ### Estructura Monorepo:
@@ -22,11 +22,8 @@ Permite gestionar la carga masiva de pedidos por CSV/Excel, el catálogo de prod
 > **IMPORTANTE**: Debido a que `apps/web` usa React 18 (Next.js 14) y `apps/mobile` usa React 19 (Expo 54), las dependencias de cada app deben gestionarse de forma aislada:
 ```bash
 # Instalar dependencias en ambas apps:
-npm install --prefix apps/web
-npm install --prefix apps/mobile
-
-# En la raíz (symlinks de workspaces):
-npm install
+npm ci --prefix apps/web
+npm ci --prefix apps/mobile
 ```
 
 ### 2.2. Ejecución Local
@@ -94,14 +91,17 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 - **Estilos y UI**:
   - Tailwind CSS 3.
   - Paleta de colores oficial:
-    - Fondo: `#F3F3F3` (`bg-bg`)
+    - Fondo: `#F3F4F6` (`bg-bg`)
     - Tarjeta/Superficie: `#FFFFFF` (`bg-card`)
     - Borde: `#BDBDBD` (`border-border`)
-    - Rojo primario: `#C62828` (`bg-red`, `text-red`)
-    - Amarillo acento: `#FFD600` (`bg-yellow`, `text-yellow`)
+    - Muted: `#9CA3AF` (`text-muted`)
+    - Primario: `#0F4C5C` (`bg-primary`, `text-primary`)
+    - Acento: `#F2A541` (`bg-accent`, `text-accent`)
+    - Acento suave: `#FCE7C8` (`bg-accentSoft`)
     - Texto principal: `#111827` (`text-text`)
-    - Peligro: `#C0392B` (`text-danger`)
-    - Éxito: `#2E7D32` (`text-success`)
+    - Peligro: `#C0392B` (`bg-danger`, `text-danger`, `border-danger`)
+    - Éxito: `#2E7D32` (`bg-success`, `text-success`)
+    - Input: `#FFFFFF` (`bg-bgInput`)
 - **Reglas de Servidor vs Cliente**:
   - Usar `'use client';` en componentes con hooks interactivos (`useState`, `useToast`, formularios).
   - Nunca importar `supabaseAdmin` en archivos con `'use client'`. Solo importar `supabase` (cliente anon).
@@ -115,7 +115,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 - **Hardware y Capacidades Nativas**:
   - **Cámara y Escaneo**: `expo-camera` para captura de códigos de barra en tiempo real. Debe contar siempre con debounce y manejo de permisos.
   - **Respuesta Háptica**: Usar `expo-haptics` (`Haptics.notificationAsync`, `Haptics.impactAsync`) para confirmar escaneos correctos o alertar errores al operario.
-  - **Tema y Constantes**: Consumir siempre `constants/theme.ts` para colores y fuentes (`Colors.light`, `Colors.dark`).
+  - **Tema y Constantes**: Consumir siempre `constants/theme.ts` para colores y fuentes (`Colors.light`, `Colors.dark`), con soporte de temas claro y oscuro de alto contraste. Para el nombre de marca usar `constants/brand.ts` (`APP_NAME`).
 
 ### 4.3. `supabase/` (Base de Datos & Modelo de Negocio)
 - **Tablas Clave**:
@@ -136,7 +136,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
 1. **No alterar contratos de API ni firmas RPC** sin actualizar en sincronía `apps/web`, `apps/mobile` y `supabase/schema.sql`.
 2. **Preservar la separación de entornos**: No usar variables de Expo en Next.js ni variables de Next.js en Expo.
 3. **Manejo de Errores Defensivo**: En la app móvil, el operario trabaja en movimiento con guantes y mala conexión. Todo error de escaneo debe emitir toast claro y vibración de error (`Haptics.NotificationFeedbackType.Error`).
-4. **Respetar White-Labeling**: La identidad visual, logos y nombres están centralizados en `apps/mobile/app.json`, `apps/mobile/constants/theme.ts` y `apps/web/tailwind.config.js`. No cablear strings de marcas propietarias fijas en componentes reutilizables.
+4. **Respetar White-Labeling**: La identidad visual, logos y nombres están centralizados en `apps/mobile/app.json`, `apps/mobile/constants/theme.ts`, `apps/web/tailwind.config.js`, `apps/web/lib/brand.ts` y `apps/mobile/constants/brand.ts`. No cablear strings de marcas propietarias fijas en componentes reutilizables.
 5. **No introducir dependencias sin justificación**: Mantener el bundle liviano y compatible con las versiones fijadas en los `package.json`.
 6. **Validación obligatoria de cambios**: al modificar `apps/web`, correr `npm run build:web` o `npm run lint:web`; al modificar `apps/mobile`, correr `./node_modules/.bin/tsc --noEmit` dentro de `apps/mobile` o `npm run lint:mobile`. Informar el resultado real.
 7. **Comandos aislados por app**: usar siempre `--prefix apps/web` o `--prefix apps/mobile` (React 18 vs React 19), nunca instalar dependencias de una app desde la raíz.

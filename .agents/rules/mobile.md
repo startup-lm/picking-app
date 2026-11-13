@@ -15,14 +15,14 @@
   - El escaneo debe ser ultra reactivo y tolerante al ruido visual del depósito.
   - Implementar bloqueo (debounce o flag `scannedRef = true`) mientras se procesa la validación de un código para evitar lecturas duplicadas en milisegundos.
   - Diferenciar claramente si el código escaneado coincide con:
-    1. `package_barcode`: Incrementa `package_scanned` en la línea correspondiente.
-    2. `unit_barcode`: Incrementa `unit_scanned` en la línea correspondiente.
-  - En caso de código no reconocido en el pedido, emitir feedback auditivo o vibración de error inmediata.
+    1. `package_barcode`: Debe incrementar `package_scanned` en la línea correspondiente.
+    2. `unit_barcode`: Debe incrementar `unit_scanned` en la línea correspondiente.
+  - En caso de código no reconocido en el pedido, debe emitir feedback auditivo o vibración de error inmediata.
 - **Háptica y Feedback al Operario**:
-  - Escaneo exitoso: `Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)` o `Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)`.
-  - Escaneo erróneo / Exceso de cantidad: `Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)`.
+  - Escaneo exitoso: Debe usar `Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)` o `Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)`.
+  - Escaneo erróneo / Exceso de cantidad: Debe usar `Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)`.
 - **Tema y Consistencia Visual**:
-  - Consumir siempre `constants/theme.ts`.
+  - Consumir siempre `constants/theme.ts` (con paleta de alto contraste claro/oscuro) y `constants/brand.ts` (`APP_NAME`).
   - Asegurar legibilidad con tipografía clara y contrastes altos aptos para pantallas en movimiento bajo luz artificial de depósito.
 
 ## 3. Verificación
