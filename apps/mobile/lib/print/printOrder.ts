@@ -1,44 +1,41 @@
-import type { Order, Product } from '@/types/db';
-import { getProductsByIds } from '@/lib/repository/products';
-import { getProductOrdersByOrder } from '../repository/productOrder';
+import { getOrderDetail } from '@/lib/repository/orders';
 import { generateOrderPDF } from '@/lib/print/printOrderSheet';
-import { BuildOptions, PrintItem } from '@/types/print';
+import type { BuildOptions, PrintItem } from '@/types/print';
 
-export async function generateOrderPdfFromDb(
-  order: Order,
+export async function generateOrderPdf(
+  orderId: number,
   options?: BuildOptions
 ): Promise<{ uri: string; base64?: string }> {
-  // 1) Líneas del pedido (product_order)
-  const poRows = await getProductOrdersByOrder(order.id);
+  const detail = await getOrderDetail(orderId);
+  if (!detail) {
+    throw new Error('not_found');
+  }
 
-  // 2) Traer productos en batch (dedupe para no repetir llamadas)
-  const uniqueIds = Array.from(new Set(poRows.map(r => r.product_id)));
-  const products = await getProductsByIds(uniqueIds);
-  const byId = new Map<number, Product | null>(products.map(p => [p.id, p]));
+  const items: PrintItem[] = detail.lines
+    .map((l) => ({
+      sku: l.product.sku,
+      description: l.product.description,
+      location: l.location,
+      bultos: l.package_total,
+      sueltas: l.unit_total,
+    }))
+    .sort((a, b) => {
+      const la = a.location ?? '';
+      const lb = a.location ?? '';
+      const locCmp = la.localeCompare(lb, 'es', { sensitivity: 'base' });
+      if (locCmp !== 0) return locCmp;
+      return a.sku.localeCompare(b.sku, 'es', { sensitivity: 'base' });
+    });
 
-  // 3) Mapear a PrintItem[] asegurando todos los campos requeridos
-  const items: PrintItem[] = poRows.map(r => {
-    const p = byId.get(r.product_id) ?? null;
-
-    const product: Product = {
-      id: p?.id ?? r.product_id,
-      sku: p?.sku ?? '',
-      description: p?.description ?? '',
-      package_barcode: p?.package_barcode ?? 0,
-      unit_barcode: p?.unit_barcode ?? 0,
-      // tu SELECT actual no trae created_at; lo completamos para cumplir el tipo
-      created_at: (p as any)?.created_at ?? '',
-    };
-
-    return {
-      product,
-      bultos: r.package_total ?? 0,
-      sueltas: r.unit_total ?? 0,
-      location: (r as any).location ?? '',
-    };
-  });
-
-  // 4) Generar PDF
   const opts: BuildOptions = { padRowsTo: 15, ...options };
-  return await generateOrderPDF(order, items, opts);
+  return await generateOrderPDF(
+    {
+      order_number: detail.order_number,
+      customer_name: detail.customer_name,
+      total_package: detail.total_package,
+      total_unit: detail.total_unit,
+    },
+    items,
+    opts
+  );
 }

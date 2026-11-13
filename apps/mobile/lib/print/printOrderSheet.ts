@@ -1,9 +1,7 @@
 // lib/print/printOrderSheet.ts
 import * as Print from 'expo-print';
-// Usamos la API legacy para evitar el warning y mantener move/copy/delete.
 import * as FileSystem from 'expo-file-system/legacy';
-import type { Order, Product } from '@/types/db';
-import type { PrintItem, BuildOptions } from '@/types/print';
+import type { PrintItem, BuildOptions, PrintOrderHeader } from '@/types/print';
 
 const escapeHtml = (s: string | undefined | null) =>
   String(s ?? '')
@@ -12,22 +10,22 @@ const escapeHtml = (s: string | undefined | null) =>
     .replace(/>/g, '&gt;');
 
 function slugify(input: string, max = 50) {
-  return (input ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9\-_. ]+/g, ' ')
-    .trim()
-    .replace(/\s+/g, '_')
-    .slice(0, max) || 'cliente';
+  return (
+    (input ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\-_. ]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '_')
+      .slice(0, max) || 'cliente'
+  );
 }
 
-// Obtiene el directorio de un file URI "file:///.../nombre.pdf"
 function dirname(uri: string) {
   const i = uri.lastIndexOf('/');
   return i >= 0 ? uri.slice(0, i + 1) : uri;
 }
 
-// Si ya existe un archivo con ese nombre, genera uno único: nombre-1.pdf, nombre-2.pdf, ...
 async function reserveTargetPath(baseDir: string, baseName: string) {
   const dot = baseName.lastIndexOf('.');
   const name = dot > 0 ? baseName.slice(0, dot) : baseName;
@@ -36,7 +34,6 @@ async function reserveTargetPath(baseDir: string, baseName: string) {
   let candidate = `${name}${ext}`;
   let idx = 1;
 
-  // @ts-ignore - legacy getInfoAsync existe en la API legacy
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const info = await FileSystem.getInfoAsync(baseDir + candidate);
@@ -47,7 +44,7 @@ async function reserveTargetPath(baseDir: string, baseName: string) {
 }
 
 export function buildOrderHTML(
-  order: Order,
+  order: PrintOrderHeader,
   items: PrintItem[],
   opts: BuildOptions = {}
 ) {
@@ -58,14 +55,9 @@ export function buildOrderHTML(
       ? [
           ...items,
           ...Array.from({ length: padRowsTo - items.length }).map(() => ({
-            product: {
-              id: 0,
-              sku: '',
-              description: '',
-              package_barcode: 0,
-              unit_barcode: 0,
-              created_at: '',
-            } as Product,
+            sku: '',
+            description: '',
+            location: '',
             bultos: 0,
             sueltas: 0,
           })),
@@ -74,16 +66,14 @@ export function buildOrderHTML(
 
   const rows = filledItems
     .map((it) => {
-      const { product, bultos, sueltas } = it as any;
-      const location = (it as any).location ?? '';
-      const sku = product.sku ?? '';
+      const location = it.location ?? '';
       return `
       <tr>
-        <td class="code">${escapeHtml(sku)}</td>
-        <td class="desc">${escapeHtml(product.description)}</td>
+        <td class="code">${escapeHtml(it.sku)}</td>
+        <td class="desc">${escapeHtml(it.description)}</td>
         <td class="loc">${escapeHtml(location)}</td>
-        <td class="num">${bultos || ''}</td>
-        <td class="num">${sueltas || ''}</td>
+        <td class="num">${it.bultos || ''}</td>
+        <td class="num">${it.sueltas || ''}</td>
       </tr>`;
     })
     .join('');
@@ -93,7 +83,7 @@ export function buildOrderHTML(
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Pedido ${escapeHtml(String(order.id))} - ${escapeHtml(String(order.client))}</title>
+  <title>Pedido ${escapeHtml(order.order_number)} - ${escapeHtml(order.customer_name)}</title>
   <style>
     @page { size: A4; margin: 5mm; }
     * { box-sizing: border-box; }
@@ -119,7 +109,7 @@ export function buildOrderHTML(
 </head>
 <body>
   <div class="sheet">
-    <div class="title">${escapeHtml(order.client)} - # ${escapeHtml(String(order.id))}</div>
+    <div class="title">${escapeHtml(order.customer_name)} - ${escapeHtml(order.order_number)}</div>
 
     <table>
       <thead>
@@ -146,24 +136,21 @@ export function buildOrderHTML(
 }
 
 export async function generateOrderPDF(
-  order: Order,
+  order: PrintOrderHeader,
   items: PrintItem[],
   opts: BuildOptions = {}
 ): Promise<{ uri: string; base64?: string }> {
-  // 1) generar el PDF temporal
   const html = buildOrderHTML(order, items, opts);
   const { uri, base64 } = await Print.printToFileAsync({
     html,
     base64: !!opts.returnBase64,
   });
 
-  // 2) armar nombre destino en el MISMO directorio del temporal
-  const clientSlug = slugify(String(order.client ?? ''));
-  const desiredName = `pedido_${String(order.id)}_${clientSlug}.pdf`.toLowerCase();
+  const clientSlug = slugify(order.customer_name);
+  const desiredName = `pedido_${order.order_number}_${clientSlug}.pdf`.toLowerCase();
   const baseDir = dirname(uri);
   const targetUri = await reserveTargetPath(baseDir, desiredName);
 
-  // 3) mover/renombrar (con fallback a copy+delete)
   try {
     if (uri !== targetUri) {
       try {
@@ -175,7 +162,6 @@ export async function generateOrderPDF(
     }
     return opts.returnBase64 ? { uri: targetUri, base64 } : { uri: targetUri };
   } catch {
-    // si algo falla, devolvé el temporal
     return opts.returnBase64 ? { uri, base64 } : { uri };
   }
 }
