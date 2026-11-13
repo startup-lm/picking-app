@@ -14,7 +14,13 @@
     "release": "node scripts/release.mjs",
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",
-    "release:major": "node scripts/release.mjs major"
+    "release:major": "node scripts/release.mjs major",
+    "db:local": "supabase start && supabase db reset",
+    "db:test": "supabase test db && bash scripts/db-concurrency-test.sh",
+    "db:types": "supabase gen types typescript --local > apps/web/types/supabase.ts && cp apps/web/types/supabase.ts apps/mobile/types/supabase.ts",
+    "db:setup": "bash scripts/db-setup.sh",
+    "db:create-admin": "node scripts/db-create-admin.mjs",
+    "db:bundle": "node scripts/db-bundle.mjs"
   },
   "keywords": [
     "wms",
